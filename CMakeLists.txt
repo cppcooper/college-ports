@@ -10,7 +10,7 @@ set(CHERYL_ENGINE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cheryl-engine"
     CACHE PATH "Path to a local Cheryl Engine v4 checkout (empty to fetch it)")
 set(CHERYL_ENGINE_GIT_REPOSITORY "https://github.com/cppcooper/cheryl-engine.git"
     CACHE STRING "Repository used when Cheryl Engine must be fetched")
-set(CHERYL_ENGINE_GIT_TAG "engine-foundations-and-consumer-facilities"
+set(CHERYL_ENGINE_GIT_TAG "develop"
     CACHE STRING "Git ref used when Cheryl Engine must be fetched")
 
 set(COLLEGE_PORTS_PROJECTS "space-invaders" CACHE STRING
@@ -35,17 +35,20 @@ else()
 endif()
 
 # Build only the engine components needed by these project targets.
-option(CHERYL_BUILD_NATIVE_GLFW "Build Cheryl's native GLFW integration" ON)
+option(CHERYL_BUILD_SDK "Enable installation of the selected libraries, headers and dependencies" ON)
 option(CHERYL_BUILD_OPENGL "Build Cheryl's OpenGL backend" ON)
 option(CHERYL_NATIVE_INPUT "Include Cheryl's native input adapter" ON)
+option(CHERYL_BUILD_UI_RMLUI "Build Cheryl's optional RmlUi integration" ON)
+option(CHERYL_BUILD_NATIVE_GLFW "Build Cheryl's native GLFW integration" ON)
+option(CHERYL_BUILD_AUDIO_MINIAUDIO "Build Cheryl's optional miniaudio integration" ON)
+
 option(CHERYL_BUILD_UI_TGUI "Build Cheryl's optional TGUI integration" OFF)
-option(CHERYL_BUILD_UI_RMLUI "Build Cheryl's optional RmlUi integration" OFF)
-option(CHERYL_BUILD_AUDIO_MINIAUDIO "Build Cheryl's optional miniaudio integration" OFF)
 option(CHERYL_BUILD_DEMO "Build Cheryl's demonstration app" OFF)
+
 option(CHERYL_BUILD_TESTS "Build Cheryl's tests and acceptance tools" OFF)
 option(CHERYL_BUILD_ALL_TESTS "Build Cheryl's aggregate test runners" OFF)
-option(CHERYL_BUILD_ACCEPTANCE_TESTS "Build Cheryl's acceptance runners" OFF)
 option(CHERYL_BUILD_CONSUMER_TESTS "Build Cheryl's consumer checks" OFF)
+option(CHERYL_BUILD_ACCEPTANCE_TESTS "Build Cheryl's acceptance runners" OFF)
 
 if(CHERYL_ENGINE_SOURCE_DIR AND EXISTS "${CHERYL_ENGINE_SOURCE_DIR}/CMakeLists.txt")
     message(STATUS "Using Cheryl Engine checkout: ${CHERYL_ENGINE_SOURCE_DIR}")
