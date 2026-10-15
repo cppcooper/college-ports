@@ -1,4 +1,4 @@
-#include <space_invaders/core/game.h>
+#include <../../include/space_invaders/SpaceInvaders.h>
 #include <space_invaders/core/global.h>
 #include <space_invaders/objects/screen_objs.h>
 #include <space_invaders/systems/screen_mgr.h>
@@ -78,7 +78,7 @@ void Enemy::Death()
 	{
 		dead = true;
 		x = x - x_offset;
-		game::Instance().Increase_Score( m_frameIndex * 100 );
+		OldSpaceInvaders::Instance().Increase_Score( m_frameIndex * 100 );
 		t1 = std::thread( &Enemy::set_deletion, this );
 	}
 }

@@ -1,6 +1,6 @@
 //This file is where a lot of the gameplay mechanics happen
 
-#include <space_invaders/core/game.h>
+#include <../../include/space_invaders/SpaceInvaders.h>
 #include <space_invaders/core/global.h>
 #include <space_invaders/objects/Play.h>
 
@@ -18,7 +18,7 @@ void player::Death()
 {
 	Sync();
 	alive = false;
-	game::Instance().Player_Death();
+	OldSpaceInvaders::Instance().Player_Death();
 }
 
 void player::unDeath()
