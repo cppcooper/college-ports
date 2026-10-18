@@ -1,0 +1,45 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "shared",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/builds/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "shared-debug",
+      "displayName": "Cheryl SDK (Debug)",
+      "inherits": "shared",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "shared-release",
+      "displayName": "Cheryl SDK (Release)",
+      "inherits": "shared",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "shared-debug",
+      "configurePreset": "shared-debug"
+    },
+    {
+      "name": "shared-release",
+      "configurePreset": "shared-release"
+    }
+  ]
+}

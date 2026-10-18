@@ -1,3 +1,8 @@
 [submodule "assets"]
 	path = assets
 	url = https://github.com/cppcooper/assets.git
+[submodule "extern/cheryl-engine"]
+	path = extern/cheryl-engine
+	url = https://github.com/cppcooper/cheryl-engine.git
+	branch = fixes-develop
+	shallow = true
