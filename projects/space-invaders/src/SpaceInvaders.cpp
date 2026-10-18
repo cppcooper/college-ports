@@ -12,21 +12,33 @@ namespace SIControls {
     constexpr CE::Input::Actions::Id Menu{4};
 } // namespace De
 
+
 void SpaceInvaders::init() {
     auto& input = engine_context.input();
     auto& bindings = input.bindings();
-    std::vector<CE::Input::Actions::BindingId> binding_ids;
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeyA}, SIControls::MoveLeft));
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeyLeft}, SIControls::MoveLeft));
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeyD}, SIControls::MoveRight));
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeyRight}, SIControls::MoveRight));
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeySpace}, SIControls::Fire));
-    binding_ids.push_back(bindings.bind_button({input.keyboard_id(), gainput::KeyEscape}, SIControls::Menu));
-    const std::filesystem::path assets_root = "/mnt/projects/assets";
 
+    using CE::Input::KeyboardKey;
+    const std::array<CE::Input::Control,6> controls{{
+        {input.keyboard_id(), KeyboardKey::A},
+        {input.keyboard_id(), KeyboardKey::Left},
+        {input.keyboard_id(), KeyboardKey::D},
+        {input.keyboard_id(), KeyboardKey::Right},
+        {input.keyboard_id(), KeyboardKey::Space},
+        {input.keyboard_id(), KeyboardKey::Escape}
+    }};
+    binding_ids.insert(binding_ids.end(), {
+        bindings.bind_button(controls[0], SIControls::MoveLeft),
+        bindings.bind_button(controls[1], SIControls::MoveLeft),
+        bindings.bind_button(controls[2], SIControls::MoveRight),
+        bindings.bind_button(controls[3], SIControls::MoveRight),
+        bindings.bind_button(controls[4], SIControls::Fire),
+        bindings.bind_button(controls[5], SIControls::Menu)
+    });
+
+    const std::filesystem::path assets_root = "/mnt/projects/assets";
     CE::Assets::Loading::Loader loader(assets_root);
     loader.load_assets(engine_context.resources());
-    auto invaders_spritesheet = CE::Assets::Sprites::Manager::get().get_assets("invaders");
+    //todo: move to invasion/enemy code: auto invaders_spritesheet = CE::Assets::Sprites::Manager::get().get_assets("invaders");
 
     CE::Text::FontSelection font_selection;
     font_selection.automatic_system_fonts = true;
@@ -40,18 +52,7 @@ void SpaceInvaders::init() {
         "DejaVu Sans"
     };
     auto fonts = CE::Text::FontCollection::load(font_selection);
-    
-    //load a font set
-    // m_font = m_asset_faculties.GetAsset<Font>(font_data);
-    // m_font->m_FontSize = 28.f;
-    //
-    // //Prepare core game functionality
-    // Load_Score();
-    // invasion_mgr.SpawnNewWave();
-    // ThePlayer = new player();
-    // bullet_mgr.theplayer = ThePlayer;
-    // player_lives = 5;
-    //timeslice = 0.015;
+
 }
 
 void SpaceInvaders::init_simulation() {}
