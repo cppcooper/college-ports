@@ -1,19 +1,27 @@
 #pragma once
 #include <cheryl.h>
-#include "systems/BulletManager.h"
+
+#include <utility>
+
+#include <space_invaders/controllers/invasion.h>
+#include <space_invaders/controllers/player.h>
+#include <space_invaders/controllers/ui.h>
+
 #include "systems/invasion_mgr.h"
-#include "systems/screen_mgr.h"
-#include "hud.h"
+
 
 class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Runtime::Context& engine_context;
-    std::filesystem::path asset_root;
     CE::Rendering::Camera2D camera;
-    std::vector<CE::Input::Actions::BindingId> binding_ids{};
-    std::optional<CE::Text::Rendering::Generation> score;
-    std::shared_ptr<const CE::Rendering::Resources::Material> images;
-    std::shared_ptr<const CE::Rendering::Resources::Material> text;
-    HUD hud;
+    std::filesystem::path asset_root;
+    struct CtrID {
+        enum {
+            ui = 0,
+            player,
+            invasion
+        };
+    };
+    std::array<std::unique_ptr<AbstractGameObject>, 3> controllers; //ui, player, invasion
 
 protected:
     void load_score();
@@ -24,14 +32,27 @@ protected:
     void game_over();
 
 public:
-    explicit SpaceInvaders(CE::Runtime::Context& engine)
-    : engine_context(engine), hud() {}
+    explicit SpaceInvaders(CE::Runtime::Context& engine, std::filesystem::path  asset_root)
+    : engine_context(engine), asset_root(std::move(asset_root)) {
+        auto TheUI = std::make_unique<UIController>(engine_context);
+        auto ThePlayer = std::make_unique<PlayerController>();
+        auto TheInvasion = std::make_unique<InvasionController>();
+        controllers[CtrID::ui] = std::move(TheUI);
+        controllers[CtrID::player] = std::move(ThePlayer);
+        controllers[CtrID::invasion] = std::move(TheInvasion);
+    }
 
-    void init_simulation();
-    void init() override;
+    void init_platform() override;
+    void init_simulation() override;
     void update(const CE::Game::TickContext& tick) override;
-    void prepare_render_frame(CE::Rendering::FrameWriter&) const override {}
-    void deinit() override {}
+    void prepare_render_frame(CE::Rendering::FrameWriter&) const override;
+
+    void deinit_platform() override {
+        // TODO: Forward object deinit_platform() after work settles, then release objects.
+    }
+    void deinit_simulation() override {
+        // TODO: Forward object deinit_simulation(); retain resources still used by accepted work.
+    }
 };
 
 class OldSpaceInvaders final : public CE::Game::AbstractGame {

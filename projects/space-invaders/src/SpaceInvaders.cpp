@@ -1,48 +1,26 @@
 #include <space_invaders/SpaceInvaders.h>
+
+
+//#include <templates/asset-mgr.h>
+#include <cheryl/core/resources/asset-management/asset-loader.h>
 #include <cheryl/core/logging.h>
 
-#include "core/resources/asset-management/asset-loader.h"
-#include "core/resources/asset-management/sprite-mgr.h"
-#include "templates/asset-mgr.h"
 
 namespace SIControls {
-    constexpr CE::Input::Actions::Id MoveLeft{1};
-    constexpr CE::Input::Actions::Id MoveRight{2};
-    constexpr CE::Input::Actions::Id Fire{3};
-    constexpr CE::Input::Actions::Id Menu{4};
+    constexpr CE::Input::Actions::Id Move{1};
+    constexpr CE::Input::Actions::Id MoveLeft{2};
+    constexpr CE::Input::Actions::Id MoveRight{3};
+    constexpr CE::Input::Actions::Id Fire{4};
+    constexpr CE::Input::Actions::Id Menu{5};
 } // namespace De
 
-
-void SpaceInvaders::init() {
-    auto& input = engine_context.input();
-    auto& bindings = input.bindings();
-
-    using CE::Input::KeyboardKey;
-    const std::array<CE::Input::Control,6> controls{{
-        {input.keyboard_id(), KeyboardKey::A},
-        {input.keyboard_id(), KeyboardKey::Left},
-        {input.keyboard_id(), KeyboardKey::D},
-        {input.keyboard_id(), KeyboardKey::Right},
-        {input.keyboard_id(), KeyboardKey::Space},
-        {input.keyboard_id(), KeyboardKey::Escape}
-    }};
-    binding_ids.insert(binding_ids.end(), {
-        bindings.bind_button(controls[0], SIControls::MoveLeft),
-        bindings.bind_button(controls[1], SIControls::MoveLeft),
-        bindings.bind_button(controls[2], SIControls::MoveRight),
-        bindings.bind_button(controls[3], SIControls::MoveRight),
-        bindings.bind_button(controls[4], SIControls::Fire),
-        bindings.bind_button(controls[5], SIControls::Menu)
-    });
-
-    const std::filesystem::path assets_root = "/mnt/projects/assets";
-    CE::Assets::Loading::Loader loader(assets_root);
+void SpaceInvaders::init_platform() {
+    CE::Assets::Loading::Loader loader(asset_root);
     loader.load_assets(engine_context.resources());
-    //todo: move to invasion/enemy code: auto invaders_spritesheet = CE::Assets::Sprites::Manager::get().get_assets("invaders");
 
     CE::Text::FontSelection font_selection;
     font_selection.automatic_system_fonts = true;
-    font_selection.asset_directories = {assets_root};
+    font_selection.asset_directories = {asset_root};
     font_selection.preferred = {
         "ProggyVector",
         "Cantarell",
@@ -51,11 +29,37 @@ void SpaceInvaders::init() {
         "FreeSerif",
         "DejaVu Sans"
     };
-    auto fonts = CE::Text::FontCollection::load(font_selection);
+    engine_context.fonts().configure(font_selection);
 
+    for (const auto& obj : controllers) {
+        if (obj) obj->init_platform(engine_context);
+    }
 }
 
-void SpaceInvaders::init_simulation() {}
+void SpaceInvaders::init_simulation() {
+    for (const auto& obj: controllers) {
+        if (obj) obj->init_simulation();
+    }
+    //todo: move to invasion/enemy code: auto invaders_spritesheet = CE::Assets::Sprites::Manager::get().get_assets("invaders");
+    //todo: initialize actors
+}
+
+void SpaceInvaders::update(const CE::Game::TickContext& tick) {
+    // UI currently runs after player; a pause request would arrive after player input.
+    for (const auto& obj : controllers) {
+        // The invasion slot is empty: this null dereference is undefined behavior.
+        if (obj) obj->update(tick);
+    }
+}
+
+void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {
+    auto pass = frame.begin_pass(camera.projection_matrix(), camera.view_matrix());
+    const CE::Rendering::Submission::Context2D context{pass.semantics(), pass.parameters(), pass.constraints()};
+    if (auto* ui = dynamic_cast<const UIController*>(controllers[CtrID::ui].get())) {
+        ui->append(frame);
+    }
+    // TODO: Append UIController after world draws, with the menu above the HUD.
+}
 
 void OldSpaceInvaders::DeInit(void) {
     if (t1.joinable()) {
