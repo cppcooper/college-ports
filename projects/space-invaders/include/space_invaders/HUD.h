@@ -1,24 +1,17 @@
 #pragma once
 
-#include <cheryl.h>
+#include <cheryl/core/game-framework/tick-context.h>
 #include <cheryl/core/resources/asset-management/sprite-mgr.h>
+#include <cheryl/ui/tgui/session.h>
 #include <TGUI/Widgets/Label.hpp>
 #include <TGUI/Widgets/Picture.hpp>
 
 #include <array>
 #include <format>
-#include <future>
-#include <memory>
 #include <stdexcept>
 
 class HUD final {
-    CE::Input::System& input;
-    CE::UI::TGUI::Session& session;
-
-    CE::Runtime::PlatformDispatcher::Submission platform;
-    CE::UI::TGUI::SceneUploader uploader;
-    CE::UI::TGUI::Scene scene;
-    std::future<CE::UI::TGUI::Scene> pending;
+    CE::UI::TGUI::Session& session; // Owned by UIController; outlives this HUD.
 
     std::array<tgui::Picture::Ptr, 3> lives;
     tgui::Label::Ptr score;
@@ -26,11 +19,8 @@ class HUD final {
     int score_value = 0;
 
 public:
-    explicit HUD(CE::Runtime::Context& engine, const std::unique_ptr<CE::UI::TGUI::Session>& session)
-    : input(engine.input()),
-      session(*session),
-      platform(engine.platform_dispatcher().submission()),
-      uploader(engine.resources()) {
+    explicit HUD(CE::UI::TGUI::Session& session)
+    : session(session) {
         create_widgets();
     }
 
@@ -41,21 +31,6 @@ public:
         score->setText(std::format("Score: {}", score_value));
         for (std::size_t i = 0; i < lives.size(); ++i)
             lives[i]->setVisible(i < extra_lives);
-
-        // pending is never assigned, so this never publishes a HUD-owned scene.
-        static_cast<void>(CE::UI::TGUI::adopt_scene(pending, scene));
-    }
-
-    // scene stays empty, so this append currently draws nothing.
-    void append(CE::Rendering::FrameWriter& frame) const { scene.write(frame); }
-
-    void close_after_quiescence() {
-        score.reset();
-        for (auto& life : lives)
-            life.reset();
-        // Also closes UIController's borrowed session; later UI calls then throw failed_operation.
-        session.close_after_quiescence();
-        scene = CE::UI::TGUI::Scene{};
     }
 
 private:
