@@ -16,15 +16,15 @@ struct ActorActions {
     static constexpr CE::Input::Actions::Id fire{4};
 };
 
-class PlayerController final : ActorController {
+class PlayerController final : public ActorController {
     CE::Input::Actions::Context controls;
 
 public:
-    explicit PlayerController(CE::Input::Actions::Context bound_actions)
-    : controls(std::move(bound_actions)) {}
+    PlayerController() = default;
 
     [[nodiscard]] static CE::Input::Actions::ContextDefinition defined_controls(const CE::Input::System& system) {
         using namespace CE::Input;
+        // GLFW reads stored IDs here; wrong-thread access does not inherently throw.
         const auto keyboard = system.keyboard_id();
         const auto gamepad = system.gamepad_id();
         const std::array controls_array{
@@ -50,16 +50,50 @@ public:
         return definition;
     }
 
-    void move(float horizontal) override {};
-    void fire() override {};
+    // These stubs do not move an actor or create a shot, even when input is active.
+    void move(const double delta, const float horizontal) override {
+        if (actor) {
+            actor->move(delta, horizontal);
+        }
+    };
+    void fire() override {
+        //actor->position;
+        // todo: dispatch a player fire event
+    };
     void update(const CE::Game::TickContext& tick) override {
         const auto actions_view = tick.input.actions(controls);
-        float horizontal = (actions_view.button(ActorActions::left).held() ? -1.0f : 0.0f)
+        const float horizontal = actions_view.axis(ActorActions::move).current
+            + (actions_view.button(ActorActions::left).held() ? -1.0f : 0.0f)
             + (actions_view.button(ActorActions::right).held() ? 1.0f : 0.0f);
-        horizontal += actions_view.axis(ActorActions::move).current;
-        move(horizontal);
+        move(tick.delta_seconds, horizontal);
         if (actions_view.button(ActorActions::fire).pressed()) {
             fire();
         }
-    };
+    }
+
+    // TODO (bindings): Remove bound_actions and its constructor initializer;
+    // controls (CE::Input::Actions::Context) can default-construct empty.
+    // In init_platform(), get CE::Input::Actions::ContextSubmission from
+    // engine.input().action_contexts(), attach defined_controls(engine.input())
+    // (CE::Input::Actions::ContextDefinition), storing the returned Context in controls.
+    // Submission/definition can be local; remove prebinding from SpaceInvaders.
+    void init_platform(CE::Runtime::Context& engine) override {
+        auto& input = engine.input();
+        controls = input.action_contexts().attach(defined_controls(input));
+        // First acquisition writes mapper state without a lock; overlap with polling
+        // is a data race. Normal startup polling starts after this hook, so it may work here.
+        // attach() is synchronized; it queues mappings for the next platform poll.
+    }
+
+    void init_simulation() override {
+        // TODO: Set up the Actor* link on simulation before movement/fire use it.
+    }
+
+    void deinit_platform() override {
+        // TODO: Reset controls (CE::Input::Actions::Context) while engine input still exists.
+    }
+
+    void deinit_simulation() override {
+        // TODO: Clear simulation-side actor state before this owner exits.
+    }
 };
