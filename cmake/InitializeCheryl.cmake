@@ -1,9 +1,25 @@
 find_package(Git REQUIRED)
+get_filename_component(cheryl_default_source
+    "${COLLEGE_PORTS_SOURCE_DIR}/extern/cheryl-engine" REALPATH)
+get_filename_component(cheryl_selected_source "${CHERYL_ENGINE_SOURCE_DIR}" REALPATH
+    BASE_DIR "${COLLEGE_PORTS_SOURCE_DIR}")
 execute_process(
     COMMAND "${GIT_EXECUTABLE}" -C "${COLLEGE_PORTS_SOURCE_DIR}"
-        rev-parse :extern/cheryl-engine
+        rev-parse :./extern/cheryl-engine
     OUTPUT_VARIABLE required_revision OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY)
+    RESULT_VARIABLE cheryl_revision_result ERROR_QUIET)
+if(NOT cheryl_revision_result EQUAL 0)
+    if(CHECKOUT_CHERYL_SOURCE)
+        message(FATAL_ERROR
+            "No recorded Cheryl submodule commit is available to check out. "
+            "Select an existing external checkout with CHERYL_ENGINE_SOURCE_DIR instead.")
+    endif()
+    if(cheryl_selected_source STREQUAL cheryl_default_source)
+        message(FATAL_ERROR
+            "The default Cheryl source requires the college-ports Git submodule entry. "
+            "For source-only deployments, set CHERYL_ENGINE_SOURCE_DIR to an existing external Git checkout.")
+    endif()
+endif()
 
 # Initialize the default submodule on demand; custom source paths must already exist.
 if(CHERYL_ENGINE_SOURCE_DIR STREQUAL "${COLLEGE_PORTS_SOURCE_DIR}/extern/cheryl-engine")
@@ -22,9 +38,17 @@ if(NOT EXISTS "${CHERYL_ENGINE_SOURCE_DIR}/CMakeLists.txt")
 endif()
 
 execute_process(
-    COMMAND "${GIT_EXECUTABLE}" -C "${CHERYL_ENGINE_SOURCE_DIR}" rev-parse HEAD
+    COMMAND "${GIT_EXECUTABLE}" -C "${CHERYL_ENGINE_SOURCE_DIR}"
+        rev-parse --verify "HEAD^{commit}"
     OUTPUT_VARIABLE source_revision OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ERROR_IS_FATAL ANY)
+    RESULT_VARIABLE cheryl_source_result ERROR_QUIET)
+if(NOT cheryl_source_result EQUAL 0)
+    message(FATAL_ERROR
+        "Cheryl source at '${CHERYL_ENGINE_SOURCE_DIR}' is not a Git checkout with a valid HEAD.")
+endif()
+if(NOT cheryl_revision_result EQUAL 0)
+    set(required_revision "${source_revision}")
+endif()
 if(NOT source_revision STREQUAL required_revision)
     if(NOT CHECKOUT_CHERYL_SOURCE)
         message(FATAL_ERROR
@@ -61,4 +85,9 @@ if(CHECKOUT_CHERYL_SOURCE OR
             submodule update --init --recursive --depth 1
         COMMAND_ERROR_IS_FATAL ANY)
 endif()
-message(STATUS "Cheryl source matches the submodule commit: ${required_revision}")
+if(cheryl_revision_result EQUAL 0)
+    message(STATUS "Cheryl source matches the submodule commit: ${required_revision}")
+else()
+    message(STATUS
+        "No consumer Git submodule entry is available; building explicitly selected external Cheryl checkout at ${source_revision}")
+endif()
