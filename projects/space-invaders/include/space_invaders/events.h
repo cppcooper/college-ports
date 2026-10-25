@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cheryl/core/subsystems/event-channel.h>
+#include <glm/vec2.hpp>
 
 namespace SpaceInvadersEvents {
     struct GameOver {};
