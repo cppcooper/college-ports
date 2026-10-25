@@ -16,7 +16,7 @@
 #include <TGUI/Widgets/Picture.hpp>
 
 class HUD final {
-    CE::UI::TGUI::Session& session; // Owned by UIController; outlives this HUD.
+    CE::UI::TGUI::Session& session; // Owned by GameUI; outlives this HUD.
 
     std::array<tgui::Picture::Ptr, 3> lives;
     tgui::Label::Ptr score;
@@ -52,8 +52,9 @@ private:
         // The loaded manifest selects the normal player cell independently
         // of the player class. Cell 1 is the death frame.
         const auto player = CE::Assets::Sprites::Manager::get().get_asset("invaders", "player");
-        if (!player)
+        if (!player) {
             throw std::runtime_error("Load the invaders:player sprite before updating the HUD");
+        }
         const auto& definition = player->definition();
         const auto cell = definition.grid.cell_rect(0);
         const tgui::Texture texture{

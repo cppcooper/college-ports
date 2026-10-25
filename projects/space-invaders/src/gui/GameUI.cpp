@@ -4,14 +4,15 @@
 
 GameUI::GameUI(CE::Runtime::Context& engine) : engine(engine) {}
 
-void GameUI::init_platform() {
+void GameUI::init_platform(CE::Runtime::Context&) {
     platform.emplace(engine.platform_dispatcher().submission());
     uploader.emplace(engine.resources());
 }
 
 void GameUI::init_simulation() {
-    if (!platform || !uploader)
+    if (!platform || !uploader) {
         throw std::logic_error("Initialize GameUI platform before simulation");
+    }
     if (!session) {
         session = std::make_unique<CE::UI::TGUI::Session>(
             engine, 2, CE::UI::TGUI::SessionOptions{.automatic_view = true}
@@ -33,8 +34,9 @@ void GameUI::update(const CE::Game::TickContext& tick) {
     hud->update(tick);
 
     CE::UI::TGUI::adopt_scene(pending, scene);
-    if (!pending.valid())
+    if (!pending.valid()) {
         pending = uploader->submit(*platform, session->record());
+    }
 }
 
 void GameUI::append_passes(CE::Rendering::FrameWriter& frame) const { scene.write(frame); }

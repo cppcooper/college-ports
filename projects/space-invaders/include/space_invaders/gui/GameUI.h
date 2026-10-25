@@ -11,9 +11,11 @@
 #include <memory>
 #include <optional>
 
+#include <space_invaders/game-objects/abstract-game-object.h>
+#include <space_invaders/interfaces/frame-renderable.h>
 #include <space_invaders/gui/HUD.h>
 
-class GameUI final {
+class GameUI final : public AbstractGameObject, public FrameRenderable {
     CE::Runtime::Context& engine;
     std::optional<CE::Runtime::PlatformDispatcher::Submission> platform;
     std::optional<CE::UI::TGUI::SceneUploader> uploader;
@@ -25,16 +27,17 @@ class GameUI final {
 
 public:
     explicit GameUI(CE::Runtime::Context& engine);
+    ~GameUI() override = default;
     GameUI(const GameUI&) = delete;
     GameUI& operator=(const GameUI&) = delete;
 
-    void init_platform();
-    void init_simulation();
-    void deinit_simulation();
-    void deinit_platform();
+    void init_platform(CE::Runtime::Context& engine) override;
+    void init_simulation() override;
+    void deinit_simulation() override;
+    void deinit_platform() override;
 
     void process_input(const CE::Game::TickContext& tick) const;
     void set_score(int value);
-    void update(const CE::Game::TickContext& tick);
-    void append_passes(CE::Rendering::FrameWriter& frame) const;
+    void update(const CE::Game::TickContext& tick) override;
+    void append_passes(CE::Rendering::FrameWriter& frame) const override;
 };

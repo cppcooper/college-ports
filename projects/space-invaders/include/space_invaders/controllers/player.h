@@ -19,8 +19,8 @@ protected:
 
 public:
     ~ActorController() override = default;
-    virtual void attach(ActorBase& target) {actor = &target;}
-    virtual void detach() {actor = nullptr;}
+    virtual void attach(ActorBase& target) { actor = &target; }
+    virtual void detach() { actor = nullptr; }
 };
 
 struct ActorActions {
@@ -34,14 +34,11 @@ class PlayerController final : public ActorController {
     CE::Input::Actions::Context controls;
 
 public:
-    PlayerController() = default;
-
     [[nodiscard]] static CE::Input::Actions::ContextDefinition defined_controls(const CE::Input::System& system) {
         using namespace CE::Input;
-        // GLFW reads stored IDs here; wrong-thread access does not inherently throw.
         const auto keyboard = system.keyboard_id();
         const auto gamepad = system.gamepad_id();
-        const std::array controls_array{
+        const std::array buttons{
             std::pair{Control{keyboard, KeyboardKey::A}, ActorActions::left},
             std::pair{Control{keyboard, KeyboardKey::D}, ActorActions::right},
             std::pair{Control{keyboard, KeyboardKey::Left}, ActorActions::left},
@@ -54,51 +51,30 @@ public:
 
         Actions::ContextDefinition definition;
         definition.axes.push_back(Actions::ContextAxis{
-            .modifiers = {}, .control = {gamepad, GamepadControl::LeftStickX},.action = ActorActions::move, .options = {}
+            .modifiers = {}, .control = {gamepad, GamepadControl::LeftStickX},
+            .action = ActorActions::move, .options = {}
         });
-        for (const auto& [control, action] : controls_array) {
+        for (const auto& [control, action] : buttons)
             definition.buttons.push_back(Actions::ContextButton{
                 .chord = {{control}}, .action = action
             });
-        }
         return definition;
     }
-
-    void update(const CE::Game::TickContext& tick) override {
-        if (!actor) [[unlikely]] return;
-        const auto actions_view = tick.input.actions(controls);
-        const float direction = actions_view.axis(ActorActions::move).current
-            + (actions_view.button(ActorActions::left).held() ? -1.0f : 0.0f)
-            + (actions_view.button(ActorActions::right).held() ? 1.0f : 0.0f);
-        actor->move(tick.delta_seconds, direction * 160.f);
-        if (actions_view.button(ActorActions::fire).pressed()) {
-            actor->fire();
-        }
-    }
-
-    // TODO (bindings): Remove bound_actions and its constructor initializer;
-    // controls (CE::Input::Actions::Context) can default-construct empty.
-    // In init_platform(), get CE::Input::Actions::ContextSubmission from
-    // engine.input().action_contexts(), attach defined_controls(engine.input())
-    // (CE::Input::Actions::ContextDefinition), storing the returned Context in controls.
-    // Submission/definition can be local; remove prebinding from SpaceInvaders.
     void init_platform(CE::Runtime::Context& engine) override {
         auto& input = engine.input();
         controls = input.action_contexts().attach(defined_controls(input));
-        // First acquisition writes mapper state without a lock; overlap with polling
-        // is a data race. Normal startup polling starts after this hook, so it may work here.
-        // attach() is synchronized; it queues mappings for the next platform poll.
     }
-
-    void init_simulation() override {
-        // TODO: Set up the Actor* link on simulation before movement/fire use it.
-    }
-
-    void deinit_platform() override {
-        // TODO: Reset controls (CE::Input::Actions::Context) while engine input still exists.
-    }
-
-    void deinit_simulation() override {
-        // TODO: Clear simulation-side actor state before this owner exits.
+    void deinit_platform() override { controls = {}; }
+    void deinit_simulation() override { detach(); }
+    void update(const CE::Game::TickContext& tick) override {
+        if (!actor) return;
+        const auto actions = tick.input.actions(controls);
+        const float direction = actions.axis(ActorActions::move).current
+            + (actions.button(ActorActions::left).held() ? -1.0f : 0.0f)
+            + (actions.button(ActorActions::right).held() ? 1.0f : 0.0f);
+        actor->move(tick.delta_seconds, direction * 160.0f);
+        if (actions.button(ActorActions::fire).pressed()) {
+            actor->fire();
+        }
     }
 };

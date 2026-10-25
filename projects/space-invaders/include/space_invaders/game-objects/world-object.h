@@ -21,6 +21,11 @@ struct Appearance {
     CE::Assets::Grids::CellIndex cell = 0;
 };
 
+template<int X>
+struct Registers {
+    constexpr static int value = X * 64;=
+};
+
 // Axis-aligned world bounds, with Y pointing up.
 struct Bounds {
     glm::vec2 minimum{};

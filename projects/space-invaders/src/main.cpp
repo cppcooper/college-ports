@@ -16,8 +16,9 @@ int main(int argc, char** argv) {
     });
 
     auto result = startup.initialize(argc, argv);
-    if (!result.should_start())
+    if (!result.should_start()) {
         return result.exit_code;
+    }
 
     SpaceInvaders game(*result.context, asset_root);
     auto runtime = result.make_runtime(game);

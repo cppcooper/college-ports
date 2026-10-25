@@ -7,7 +7,6 @@ include_directories("include")
 add_executable(space_invaders ${space_invaders_sources})
 target_include_directories(space_invaders PRIVATE include)
 
-# RmlUi menu calls will not link until Cheryl::UI::RmlUi is added here.
 target_link_libraries(space_invaders PRIVATE
     Cheryl::OpenGL::Startup
     Cheryl::UI::TGUI)

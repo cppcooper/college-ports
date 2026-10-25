@@ -1,93 +1,81 @@
 #pragma once
-#include <cheryl/core/resources/asset-management/sprite-mgr.h>
-#include <cheryl/core/resources/memory/allocators/object-pool-allocator.hpp>
-#include <cheryl/templates/observed-variables.h>
-#include <cheryl/assets/types/2d/sprite.h>
 
-#include <chrono>
+#include <cheryl/core/display/window-interface.h>
+#include <cheryl/core/engine/engine-context.h>
+#include <cheryl/core/game-framework/tick-context.h>
+#include <cheryl/core/subsystems/event-bus.h>
+
+#include <glm/vec2.hpp>
+
+#include <algorithm>
 #include <cstddef>
-#include <new>
-#include <random>
+#include <functional>
+#include <memory>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
-#include <vec2.hpp>
+#include <space_invaders/events.h>
+#include <space_invaders/game-objects/abstract-game-object.h>
+#include <space_invaders/game-objects/bullets.h>
 
-#include "space_invaders/events.h"
+class BulletManager final : public AbstractGameObject {
+    std::vector<std::unique_ptr<Bullet>> bullets;
+    CE::Events::EventBus::Registration shot_listener;
+    CE::Events::EventBus* events = nullptr;
+    std::function<void(int)> count_changed;
+    glm::vec2 world_size{1, 1};
 
-namespace CEAsset {
-    using Sprite = CE::Assets::Sprites::Asset;
-}
-
-class bullet {
-    using Allocator = CE::Memory::Allocators::ObjectPoolAllocator<bullet>;
-    static constexpr std::size_t initial_pool_capacity = 100;
-
-    std::shared_ptr<CEAsset::Sprite> sprite;
-    glm::vec2 position;
-    float speed;
-
-    static Allocator& allocator() {
-        static Allocator instance = [] {
-            Allocator resource;
-            auto* storage = resource.allocate(initial_pool_capacity);
-            resource.deallocate(storage, initial_pool_capacity);
-            return resource;
-        }();
-        return instance;
+    void report_count() const {
+        if (count_changed) count_changed(static_cast<int>(bullets.size()));
     }
 
 public:
-    // Optional startup initialization; the first allocation also initializes the pool.
-    static void preallocate() {
-        static_cast<void>(allocator());
-    }
+    explicit BulletManager(std::function<void(int)> observer = {}) : count_changed(std::move(observer)) {}
+    ~BulletManager() override { shot_listener.disconnect(); }
 
-    void* operator new(std::size_t size) {
-        if (size != sizeof(bullet)) {
-            throw std::bad_alloc{};
+    [[nodiscard]] std::size_t count() const noexcept { return bullets.size(); }
+    void init_platform(CE::Runtime::Context& engine) override {
+        events = &engine.events();
+        const auto size = engine.window().framebuffer_size();
+        world_size = {size.width, size.height};
+    }
+    void init_simulation() override {
+        if (!events) {
+            throw std::logic_error("Initialize BulletManager platform before simulation");
         }
-        return allocator().allocate(1);
-    }
-
-    void operator delete(void* pointer) noexcept {
-        if (pointer) {
-            allocator().deallocate(static_cast<bullet*>(pointer), 1);
-        }
-    }
-
-    bullet(const glm::vec2 position, const float speed)
-    : sprite(CE::Assets::Sprites::Manager::get().get_asset("invaders", "bullet")), position(position), speed(speed) {}
-
-    void update(double& seconds) {
-
-    }
-};
-
-class bullet_manager {
-    using BulletCount = CE::State::ObservedVariable<int>;
-    std::vector<std::unique_ptr<bullet>> m_Bullets;
-    BulletCount bullet_count;
-    CE::Events::EventBus::Registration shot_listener;
-
-protected:
-    void register_listener(CE::Events::EventBus& events) {
-        shot_listener = events.register_listener(
+        shot_listener.disconnect();
+        Bullet::preallocate();
+        shot_listener = events->register_listener(
             SpaceInvadersEvents::shot_requested_event,
             [this](const SpaceInvadersEvents::ShotRequested& shot) {
-                m_Bullets.push_back(std::make_unique<bullet>(shot.position, static_cast<float>(shot.speed)));
-                bullet_count.set(static_cast<int>(m_Bullets.size()));
+                bullets.push_back(std::make_unique<Bullet>(shot.position, shot.speed));
+                report_count();
             }
         );
     }
-
-public:
-    explicit bullet_manager(BulletCount::Callback observer)
-    : bullet_count(0, {std::move(observer)}) {}
-
-    void Update(double& seconds);
-    void Clean_Up();
-    void Player_Shoots();
-    void Enemies_Shoot();
-    void EnemyCollisions();
-    void PlayerCollisions();
+    void deinit_simulation() override {
+        shot_listener.disconnect();
+        shot_listener = {};
+        bullets.clear();
+        report_count();
+    }
+    void deinit_platform() override {
+        shot_listener.disconnect();
+        events = nullptr;
+    }
+    void update(const CE::Game::TickContext& tick) override {
+        for (const auto& bullet : bullets)
+            bullet->update(tick);
+        const auto removed = std::erase_if(bullets, [this](const auto& bullet) {
+            const auto shape = bullet->bounds();
+            return shape.maximum.y < 0.0f || shape.minimum.y > world_size.y;
+        });
+        if (removed) report_count();
+        // Actor collision responses remain unfinished.
+    }
+    void append_draws(CE::Rendering::PassWriter& pass) const {
+        for (const auto& bullet : bullets)
+            bullet->append_draws(pass);
+    }
 };
