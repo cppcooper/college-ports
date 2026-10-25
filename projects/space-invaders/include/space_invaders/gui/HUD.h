@@ -3,12 +3,17 @@
 #include <cheryl/core/game-framework/tick-context.h>
 #include <cheryl/core/resources/asset-management/sprite-mgr.h>
 #include <cheryl/ui/tgui/session.h>
-#include <TGUI/Widgets/Label.hpp>
-#include <TGUI/Widgets/Picture.hpp>
 
 #include <array>
+#include <cstddef>
 #include <format>
 #include <stdexcept>
+
+#include <TGUI/String.hpp>
+#include <TGUI/Texture.hpp>
+#include <TGUI/Vector2.hpp>
+#include <TGUI/Widgets/Label.hpp>
+#include <TGUI/Widgets/Picture.hpp>
 
 class HUD final {
     CE::UI::TGUI::Session& session; // Owned by UIController; outlives this HUD.

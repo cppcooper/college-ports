@@ -1,18 +1,24 @@
-#include <space_invaders/SpaceInvaders.h>
-
-
-//#include <templates/asset-mgr.h>
-#include <cheryl/core/resources/asset-management/asset-loader.h>
+#include <cheryl/assets/submission/draw2d.h>
+#include <cheryl/backends/opengl/gl.h>
+#include <cheryl/core/engine/engine-context.h>
+#include <cheryl/core/game-framework/tick-context.h>
 #include <cheryl/core/logging.h>
+#include <cheryl/core/rendering/render-frame.h>
+#include <cheryl/core/resources/asset-management/asset-loader.h>
+#include <cheryl/text/font-collection.h>
+#include <cheryl/text/font-service.h>
 
+#include <cassert>
+#include <chrono>
+#include <fstream>
+#include <ios>
+#include <string>
+#include <thread>
 
-namespace SIControls {
-    constexpr CE::Input::Actions::Id Move{1};
-    constexpr CE::Input::Actions::Id MoveLeft{2};
-    constexpr CE::Input::Actions::Id MoveRight{3};
-    constexpr CE::Input::Actions::Id Fire{4};
-    constexpr CE::Input::Actions::Id Menu{5};
-} // namespace De
+#include <GLFW/glfw3.h>
+
+#include <space_invaders/SpaceInvaders.h>
+#include <space_invaders/controllers/ui.h>
 
 void SpaceInvaders::init_platform() {
     CE::Assets::Loading::Loader loader(asset_root);
@@ -40,7 +46,6 @@ void SpaceInvaders::init_simulation() {
     for (const auto& obj: controllers) {
         if (obj) obj->init_simulation();
     }
-    //todo: move to invasion/enemy code: auto invaders_spritesheet = CE::Assets::Sprites::Manager::get().get_assets("invaders");
     //todo: initialize actors
 }
 
@@ -50,165 +55,19 @@ void SpaceInvaders::update(const CE::Game::TickContext& tick) {
         // The invasion slot is empty: this null dereference is undefined behavior.
         if (obj) obj->update(tick);
     }
+    if (player) player->update(tick);
+    invasion.update(tick);
 }
 
 void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {
     auto pass = frame.begin_pass(camera.projection_matrix(), camera.view_matrix());
+    if (player) player->append(pass);
+    invasion.append(pass);
     const CE::Rendering::Submission::Context2D context{pass.semantics(), pass.parameters(), pass.constraints()};
     if (auto* ui = dynamic_cast<const UIController*>(controllers[CtrID::ui].get())) {
         ui->append(frame);
     }
-    // TODO: Append UIController after world draws, with the menu above the HUD.
 }
-
-void OldSpaceInvaders::DeInit(void) {
-    if (t1.joinable()) {
-        t1.join();
-    }
-    screen.Clean_Up(true); //We need the quasi-overloaded version to synchronize each object with the main thread
-
-    delete ThePlayer;
-    //logger::FileLog_Mgr::Stop();
-}
-
-void OldSpaceInvaders::Update(double& seconds) {
-    if (t1.joinable()) {
-        t1.join();
-    }
-    Updating = true;
-    LOGFILE_1(_DEBUG1) << seconds;
-    static double seconds_remainder = 0;
-    seconds += seconds_remainder;
-    enum { loops = 10 };
-    if (seconds > (loops * timeslice)) {
-        seconds = (loops * timeslice);
-    }
-    while (seconds >= timeslice) {
-        if (!Drawing) {
-            LOGFILE_1(_INFO) << "Running Updates. Seconds: " << seconds;
-            seconds -= timeslice;
-            if (moveL) {
-                ThePlayer->MoveLeft(timeslice);
-            }
-            if (moveR) {
-                ThePlayer->MoveRight(timeslice);
-            }
-            if (shoots) {
-                bullet_mgr.Player_Shoots();
-            }
-            //These three lines update our world
-            screen.Update_Objects(timeslice); //Update individual entities
-            if (ThePlayer->playerbullet) {
-                ThePlayer->playerbullet->Update(timeslice);
-            }
-
-            invasion_mgr.Update(timeslice); //Update invaders as a whole
-            bullet_mgr.Update(timeslice); //Update bullet positions and perform collisions
-            bullet_mgr.Clean_Up();
-            invasion_mgr.Clean_Up();
-
-            needsDraw = true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(15));
-        }
-    }
-    Updating = false;
-    while (Drawing) {}
-    shoots = false;
-    seconds_remainder = seconds;
-}
-
-void OldSpaceInvaders::Draw(void) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
-    do {
-        if (needsDraw) {
-            needsDraw = false;
-            Drawing = true;
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            screen.Draw();
-            ThePlayer->Draw();
-            if (ThePlayer->playerbullet) {
-                ThePlayer->playerbullet->Draw();
-            }
-
-            glClear(GL_DEPTH_BUFFER_BIT);
-
-            //Lives - Top Right
-            Var_Mutex.lock();
-            std::string text = std::to_string(player_lives) + "x                  ";
-            Var_Mutex.unlock();
-
-            float y = Screen::Height() - 50;
-            float textWidth;
-            textWidth = m_font->WidthText(text);
-            m_font->Print(Screen::Width() - textWidth, y, text);
-
-            //Score - Top Middle
-            text = "      Score :     " + std::to_string(score);
-            textWidth = m_font->WidthText(text);
-            m_font->Print(Screen::Width() / 2, y, text);
-
-            //High Score - Top Left
-            text = "High Score :    " + std::to_string(highscore) + "    ";
-            textWidth = m_font->WidthText(text);
-            m_font->Print(50.f, y, text);
-            Drawing = false;
-
-            glfwSwapBuffers(m_engine.m_window);
-        }
-    } while (Updating);
-    screen.Clean_Up();
-}
-
-//the key codes/actions/mods for DoInput are from GLFW: check its documentation for their values
-void OldSpaceInvaders::DoInput(int& key, int& scancode, int& action, int& mods) {
-    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        switch (key) {
-            case GLFW_KEY_ESCAPE:
-                Game_Over(); //start the shutdown sequence
-                break;
-
-            case GLFW_KEY_LEFT:
-            case GLFW_KEY_A:
-                moveL = true;
-                break;
-
-            case GLFW_KEY_RIGHT:
-            case GLFW_KEY_D:
-                moveR = true;
-                break;
-
-            case GLFW_KEY_LEFT_SHIFT:
-            case GLFW_KEY_LEFT_CONTROL:
-            case GLFW_KEY_SPACE:
-                shoots = true;
-                break;
-        }
-    }
-    if (action == GLFW_RELEASE) {
-        switch (key) {
-            case GLFW_KEY_LEFT:
-            case GLFW_KEY_A:
-                moveL = false;
-                break;
-
-            case GLFW_KEY_RIGHT:
-            case GLFW_KEY_D:
-                moveR = false;
-                break;
-
-            case GLFW_KEY_LEFT_SHIFT:
-            case GLFW_KEY_LEFT_CONTROL:
-            case GLFW_KEY_SPACE:
-                //shoots = false;
-                break;
-        }
-    }
-}
-
-void OldSpaceInvaders::DoMouse(int& button, int& action, int& mod) {}
-
-void OldSpaceInvaders::DoCursor(double& x, double& y) {}
 
 void OldSpaceInvaders::Load_Score() {
     std::ifstream File_Handle;

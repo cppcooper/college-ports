@@ -1,124 +1,21 @@
-#include <GFX\gl_engine.h>
-#include <space_invaders/objects/Play.h>
-#include <space_invaders/systems/BulletManager.h>
+#include <chrono>
+#include <random>
+#include <vector>
 
-bullet::bullet(float x, float y, bool isplayer) {
-    this->x = x;
-    this->y = y;
-    m_frameIndex = game_sprites::PEW;
-    SpriteFrame& frame = (*s_sprite)[m_frameIndex];
-    width = frame.Width() * frame.m_Scale;
-    height = frame.Height() * frame.m_Scale;
-    //  isplayer? UP Value : DOWN Value
-    yincrements = isplayer ? -600 : 200;
-}
+#include <space_invaders/systems/bullet-mgr.h>
 
 //Position Update
 void bullet::Update(double& seconds) {
     LOGFILE_1(_DEBUG3) << "Bullet Object: " << seconds;
 
     //Update Position
-    y = y - (yincrements * seconds);
+    y = y - (speed * seconds);
 
     //Check if I've hit the Screen Edge
     if (y < 0)
         deleteme = true;
 }
 
-bullet_manager::bullet_manager() {
-    //We need a way to generate a number to represent how many bullets to be shot
-    //The ratio of outputs cannot be linear
-    /**/
-    //INTERVALS: Represents how many shots can be made
-    //WEIGHTS: Represents how often the corresponding number above will occur relative to the others
-    std::vector<double> intervals{1, 2, 3, 4, 5, 7};
-    std::vector<double> weights{12, 25, 16, 24, 21, 2};
-
-    //We have our statistical data but now we need..
-    //a random number distribution which follows our statistical model
-    shots_distrib = std::piecewise_linear_distribution<>(intervals.begin(), intervals.end(), weights.begin());
-
-
-    //Unimportant, initial values
-    yesno_distrib = std::bernoulli_distribution(0.005);
-    last_time_shotsmade = std::chrono::system_clock::now();
-}
-
-bool bullet_manager::x_overlap_check(bullet* B, phys_box* obj) {
-    // Difference between A & B positions on X
-    float x = obj->x - B->x;
-    if (x < 0)
-        x *= -1;
-
-    // Combined distance between centres on X & Y separately
-    float rx = (obj->width / 2) + (B->width / 2);
-
-    if (x <= rx) {
-        return true;
-    }
-    return false;
-}
-
-bool bullet_manager::y_overlap_check(bullet* B, phys_box* obj) {
-    // Difference between A & B positions on Y
-    float y = obj->y - B->y;
-    if (y < 0)
-        y *= -1;
-
-    // Combined distance between centres on X & Y separately
-    float ry = (obj->height / 2) + (B->height / 2);
-
-    if (y <= ry) {
-        return true;
-    }
-    return false;
-}
-
-//Performs all the functionality involving bullets (except: bullet position updates)
-void bullet_manager::Update(double& seconds) {
-    LOGFILE_1(_INFO);
-
-    m_InvaderLock.lock();
-    size_t size = GetV().size();
-    m_InvaderLock.unlock();
-    if (size == 0) {
-        SpawnNewWave();
-    }
-
-    // If the player pointer isn't == nullptr we're in business
-    if (theplayer) {
-        std::chrono::duration<double> elapsed = std::chrono::system_clock::now() - last_time_shotsmade;
-
-        //TODO: Revise RNG code - You know what to do
-
-        //Generate random boolean state deciding whether the alien(s) will shoot
-        double P = (((double)elapsed.count()) / 500);
-
-        m_BulletsLock.lock();
-        int size = m_Bullets.size() + 1;
-        P = P + ((1 - ((m_Bullets.size() + 1) / 30)) / 1000) + 0.02;
-        m_BulletsLock.unlock();
-
-        if (P > 0 && P <= 1) {
-            yesno_distrib = std::bernoulli_distribution(P);
-        } else if (P > 1) {
-            yesno_distrib = std::bernoulli_distribution(0.5);
-        } else {
-            yesno_distrib = std::bernoulli_distribution(0.00001);
-        }
-
-        //Shall we generate bullets or not? (if true) {make bullets fly}, else don't
-        if (yesno_distrib(RNG)) {
-            Enemies_Shoot();
-        }
-
-        //We now must perform a collision check for every ENEMY Bullet AGAINST the PLAYER
-        PlayerCollisions();
-
-        //We now check the PLAYER Bullet AGAINST any and all ENEMIES
-        EnemyCollisions();
-    }
-}
 
 //Encapsulate collision loop for Enemies vs the Player Bullet
 void bullet_manager::EnemyCollisions() {

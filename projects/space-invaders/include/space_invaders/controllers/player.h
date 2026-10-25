@@ -1,13 +1,27 @@
 #pragma once
-#include <cheryl/core/controls/input-interface.h>
+
 #include <cheryl/core/controls/action-context.h>
 #include <cheryl/core/controls/button-codes.h>
+#include <cheryl/core/controls/input-interface.h>
 #include <cheryl/core/controls/tick-input.h>
+#include <cheryl/core/engine/engine-context.h>
+#include <cheryl/core/game-framework/tick-context.h>
 
 #include <array>
 #include <utility>
 
-#include "actor.h"
+#include <space_invaders/game-objects/abstract-game-object.h>
+#include <space_invaders/game-objects/actors.h>
+
+class ActorController : public AbstractGameObject {
+protected:
+    ActorBase* actor = nullptr;
+
+public:
+    ~ActorController() override = default;
+    virtual void attach(ActorBase& target) {actor = &target;}
+    virtual void detach() {actor = nullptr;}
+};
 
 struct ActorActions {
     static constexpr CE::Input::Actions::Id move{1};
@@ -50,24 +64,15 @@ public:
         return definition;
     }
 
-    // These stubs do not move an actor or create a shot, even when input is active.
-    void move(const double delta, const float horizontal) override {
-        if (actor) {
-            actor->move(delta, horizontal);
-        }
-    };
-    void fire() override {
-        //actor->position;
-        // todo: dispatch a player fire event
-    };
     void update(const CE::Game::TickContext& tick) override {
+        if (!actor) [[unlikely]] return;
         const auto actions_view = tick.input.actions(controls);
-        const float horizontal = actions_view.axis(ActorActions::move).current
+        const float direction = actions_view.axis(ActorActions::move).current
             + (actions_view.button(ActorActions::left).held() ? -1.0f : 0.0f)
             + (actions_view.button(ActorActions::right).held() ? 1.0f : 0.0f);
-        move(tick.delta_seconds, horizontal);
+        actor->move(tick.delta_seconds, direction * 160.f);
         if (actions_view.button(ActorActions::fire).pressed()) {
-            fire();
+            actor->fire();
         }
     }
 

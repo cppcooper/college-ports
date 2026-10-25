@@ -1,14 +1,19 @@
 #pragma once
-#include <cheryl.h>
+#include <cheryl/core/engine/engine-context.h>
+#include <cheryl/core/game-framework/abstract-game.h>
+#include <cheryl/core/game-framework/tick-context.h>
+#include <cheryl/core/rendering/camera.h>
+#include <cheryl/core/rendering/render-frame.h>
 
+#include <array>
+#include <filesystem>
+#include <memory>
 #include <utility>
 
 #include <space_invaders/controllers/invasion.h>
 #include <space_invaders/controllers/player.h>
 #include <space_invaders/controllers/ui.h>
-
-#include "systems/invasion_mgr.h"
-
+#include <space_invaders/game-objects/abstract-game-object.h>
 
 class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Runtime::Context& engine_context;
@@ -22,6 +27,9 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
         };
     };
     std::array<std::unique_ptr<AbstractGameObject>, 3> controllers; //ui, player, invasion
+    std::unique_ptr<PlayerActor> player;
+    Invasion invasion;
+
 
 protected:
     void load_score();
@@ -53,32 +61,4 @@ public:
     void deinit_simulation() override {
         // TODO: Forward object deinit_simulation(); retain resources still used by accepted work.
     }
-};
-
-class OldSpaceInvaders final : public CE::Game::AbstractGame {
-    struct GameState;
-    std::unique_ptr<GameState> game_state_;
-
-    bool moveL = false;
-    bool moveR = false;
-    bool shoots = false;
-
-    std::mutex Var_Mutex;
-    unsigned short player_lives{};
-    unsigned int highscore{};
-    unsigned int score{};
-
-    player* ThePlayer = nullptr;
-    bullet_manager bullet_mgr;
-    Invasion_Formation invasion_mgr;
-    Screen_Mgr screen;
-
-protected:
-    void Load_Score();
-    void Save_Score();
-
-public:
-    void Increase_Score(int delta);
-    void Player_Death();
-    void Game_Over();
 };

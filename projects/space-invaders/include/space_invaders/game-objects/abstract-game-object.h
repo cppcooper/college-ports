@@ -1,6 +1,8 @@
 #pragma once
-#include <cheryl/core/game-framework/tick-context.h>
+
 #include <cheryl/core/engine/engine-context.h>
+#include <cheryl/core/game-framework/tick-context.h>
+#include <cheryl/core/rendering/render-frame.h>
 
 // SpaceInvaders must forward these phases; inheritance alone does not schedule them.
 struct AbstractGameObject {
@@ -10,4 +12,6 @@ struct AbstractGameObject {
     virtual void deinit_platform() {};
     virtual void deinit_simulation() {};
     virtual void update(const CE::Game::TickContext& tick) = 0;
+    virtual void append(CE::Rendering::PassWriter& pass) const {};
+    virtual void append(CE::Rendering::FrameWriter& frame) const {};
 };

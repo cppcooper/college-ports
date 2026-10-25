@@ -1,15 +1,24 @@
 #pragma once
+
+#include <cheryl/core/controls/action-context.h>
+#include <cheryl/core/controls/button-codes.h>
+#include <cheryl/core/controls/input-interface.h>
+#include <cheryl/core/controls/tick-input.h>
 #include <cheryl/core/engine/engine-context.h>
-#include <cheryl/ui/tgui/scene.h>
+#include <cheryl/core/engine/platform-dispatcher.h>
+#include <cheryl/core/game-framework/tick-context.h>
+#include <cheryl/core/rendering/render-frame.h>
+#include <cheryl/math/binary.h>
 #include <cheryl/ui/rmlui/scene.h>
-#include <cheryl/ui/tgui/session.h>
 #include <cheryl/ui/rmlui/session.h>
+#include <cheryl/ui/tgui/scene.h>
+#include <cheryl/ui/tgui/session.h>
 
 #include <future>
 #include <memory>
 #include <optional>
 
-#include <space_invaders/HUD.h>
+#include <space_invaders/gui/HUD.h>
 #include <space_invaders/game-objects/abstract-game-object.h>
 
 class UIController : public AbstractGameObject {
@@ -63,7 +72,7 @@ public:
     }
 
     // Only the TGUI scene is appended; an RmlUi menu will need a later pass.
-    void append(CE::Rendering::FrameWriter& frame) const { tgui_scene.write(frame); }
+    void append(CE::Rendering::FrameWriter& frame) const override { tgui_scene.write(frame); }
 
     void update(const CE::Game::TickContext& tick) override {
         if (initialized.words()[0] != 3) {
@@ -116,4 +125,3 @@ public:
         return definition;
     }
 };
-

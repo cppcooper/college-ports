@@ -1,3 +1,9 @@
+#include <cheryl/backends/opengl/startup.h>
+
+#include <filesystem>
+
+#include <CLI/CLI.hpp>
+
 #include <space_invaders/SpaceInvaders.h>
 
 int main(int argc, char** argv) {
