@@ -1,54 +1,61 @@
 #pragma once
 
+#include <cheryl/core/game-framework/tick-context.h>
+
+#include <chrono>
+#include <random>
+
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/systems/invasion.h>
 
-class InvasionController : public AbstractGameObject {
+class InvasionController final : public AbstractGameObject {
     Invasion& invasion;
-    std::default_random_engine RNG;
+    std::default_random_engine random;
     std::bernoulli_distribution decide_to_fire;
     std::discrete_distribution<> decide_volley_size;
-    std::chrono::time_point<std::chrono::system_clock> last_time_shot;
+    std::chrono::steady_clock::time_point last_time_shot;
     double horizontal = 50.0;
     int num_bullets = 0;
 
-protected:
-    void onEdgeHit() const {
+    void onEdgeHit() {
         invasion.descend();
-        //horizontal = -1.11 * horizontal;
-        EnemyDetail::time_scale *= 1.11;
-        // TODO: trigger event
+        horizontal *= -1.11;
+        invasion.accelerate_animation(1.11);
     }
 
 public:
     explicit InvasionController(Invasion& invasion)
-    : invasion(invasion), RNG(std::chrono::system_clock::now().time_since_epoch().count()) {
-        decide_volley_size = std::discrete_distribution<>({11,22,44,24,43,37,21,7});
-        last_time_shot = std::chrono::system_clock::now();
-    }
-    void onBulletCountChanged(const int count) {
-        num_bullets = count;
+    : invasion(invasion),
+      random(static_cast<std::default_random_engine::result_type>(std::chrono::steady_clock::now().time_since_epoch().count())),
+      decide_volley_size({11, 22, 44, 24, 43, 37, 21, 7}),
+      last_time_shot(std::chrono::steady_clock::now()) {}
+    void onBulletCountChanged(int count) { num_bullets = count; }
+    void init_simulation() override {
+        horizontal = 50.0;
+        num_bullets = 0;
+        last_time_shot = std::chrono::steady_clock::now();
     }
     void update(const CE::Game::TickContext& tick) override {
-        if (auto result = invasion.move(EnemyDetail::time_scale * tick.delta_seconds, horizontal); get<0>(result)) {
+        const auto [edge, remaining] = invasion.move(tick.delta_seconds, horizontal);
+        if (edge) {
             onEdgeHit();
-            result = invasion.move(EnemyDetail::time_scale * get<1>(result), horizontal);
+            static_cast<void>(invasion.move(remaining, horizontal));
         }
-        const auto now = std::chrono::system_clock::now();
+
+        const auto now = std::chrono::steady_clock::now();
         const std::chrono::duration<double> elapsed = now - last_time_shot;
-        double P = ((elapsed.count()) / 500);
-        // todo: acquire num bullets
-        P = P + ((1 - ((static_cast<double>(num_bullets) + 1) / 30)) / 1000) + 0.02;
-        if (0 < P && P < 1) {
-            decide_to_fire = std::bernoulli_distribution(P);
-        } else if (P > 1) {
+        const double probability = elapsed.count() / 500.0
+            + (1.0 - (static_cast<double>(num_bullets) + 1.0) / 30.0) / 1000.0 + 0.02;
+        if (probability > 0.0 && probability < 1.0) {
+            decide_to_fire = std::bernoulli_distribution(probability);
+        } else if (probability > 1.0) {
             decide_to_fire = std::bernoulli_distribution(0.5);
         } else {
             decide_to_fire = std::bernoulli_distribution(0.00001);
         }
-        if (decide_to_fire(RNG)) {
+        if (decide_to_fire(random)) {
             last_time_shot = now;
-            invasion.fire(decide_volley_size(RNG), RNG);
+            invasion.fire(decide_volley_size(random), random);
         }
     }
 };
