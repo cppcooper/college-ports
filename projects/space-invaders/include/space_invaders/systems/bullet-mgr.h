@@ -19,6 +19,8 @@
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/game-objects/bullets.h>
 
+class PlayerController;
+
 class BulletManager final : public AbstractGameObject {
     std::vector<std::unique_ptr<Bullet>> bullets;
     CE::Events::EventBus::Registration shot_listener;
@@ -29,10 +31,18 @@ class BulletManager final : public AbstractGameObject {
     void report_count() const {
         if (count_changed) count_changed(static_cast<int>(bullets.size()));
     }
+protected:
+    void unregister_listener() const {
+        if (!shot_listener.disconnect()) {
+            // todo: throw exception
+        }
+    }
 
 public:
-    explicit BulletManager(std::function<void(int)> observer = {}) : count_changed(std::move(observer)) {}
-    ~BulletManager() override { shot_listener.disconnect(); }
+    explicit BulletManager(PlayerController& pc, std::function<void(int)> observer = {})
+    : count_changed(std::move(observer)) {}
+
+    ~BulletManager() override { unregister_listener(); }
 
     [[nodiscard]] std::size_t count() const noexcept { return bullets.size(); }
     void init_platform(CE::Runtime::Context& engine) override {
@@ -40,42 +50,18 @@ public:
         const auto size = engine.window().framebuffer_size();
         world_size = {size.width, size.height};
     }
-    void init_simulation() override {
-        if (!events) {
-            throw std::logic_error("Initialize BulletManager platform before simulation");
-        }
-        shot_listener.disconnect();
-        Bullet::preallocate();
-        shot_listener = events->register_listener(
-            SpaceInvadersEvents::shot_requested_event,
-            [this](const SpaceInvadersEvents::ShotRequested& shot) {
-                bullets.push_back(std::make_unique<Bullet>(shot.position, shot.speed));
-                report_count();
-            }
-        );
-    }
+    void init_simulation() override;
+    void append_draws(CE::Rendering::PassWriter& pass) const;
+    void update(const CE::Game::TickContext& tick) override;
+
     void deinit_simulation() override {
-        shot_listener.disconnect();
+        unregister_listener();
         shot_listener = {};
         bullets.clear();
         report_count();
     }
     void deinit_platform() override {
-        shot_listener.disconnect();
+        unregister_listener();
         events = nullptr;
-    }
-    void update(const CE::Game::TickContext& tick) override {
-        for (const auto& bullet : bullets)
-            bullet->update(tick);
-        const auto removed = std::erase_if(bullets, [this](const auto& bullet) {
-            const auto shape = bullet->bounds();
-            return shape.maximum.y < 0.0f || shape.minimum.y > world_size.y;
-        });
-        if (removed) report_count();
-        // Actor collision responses remain unfinished.
-    }
-    void append_draws(CE::Rendering::PassWriter& pass) const {
-        for (const auto& bullet : bullets)
-            bullet->append_draws(pass);
     }
 };

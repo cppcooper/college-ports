@@ -38,104 +38,13 @@ class Invasion final : public AbstractGameObject {
         Pool() = default;
         Pool(const Pool&) = delete;
         Pool& operator=(const Pool&) = delete;
+        ~Pool();
 
-        ~Pool() {
-            auto* storage = enemies.data();
-            for (auto i = enemies.size(); i > 0; --i)
-                Traits::destroy(allocator, storage + i - 1);
-            if (storage) Traits::deallocate(allocator, storage, enemy_count);
-        }
-
-        EnemyActor& construct(
-            const EnemyType type, const glm::vec2 position,
-            const CE::Events::EventBus::Publisher& publisher
-        ) {
-            auto* storage = enemies.data();
-            auto* enemy = storage + enemies.size();
-            Traits::construct(allocator, enemy, type, position, static_cast<int>(enemies.size()), publisher);
-            enemies = {storage, enemies.size() + 1};
-            return *enemy;
-        }
-
+        EnemyActor& construct(EnemyType type, glm::vec2 position, const CE::Events::EventBus::Publisher& publisher);
         // Factory: reserve once, then construct each column from its front row back.
-        static std::unique_ptr<Pool> create(
-            const CE::Events::EventBus::Publisher& publisher, const glm::vec2 world_size
-        ) {
-            auto result = std::make_unique<Pool>();
-            result->front_line.reserve(columns);
-            result->enemies = {Traits::allocate(result->allocator, enemy_count), 0};
-            constexpr std::array types{
-                EnemyType::MALOLRIE, EnemyType::ARCHER, EnemyType::LANA, EnemyType::CHERYL,
-                EnemyType::CYRIL, EnemyType::RAY, EnemyType::KRIEGER
-            };
-
-            glm::vec2 largest{};
-            for (const auto type : types) {
-                const auto sprite = GetEnemySprite(type);
-                if (!sprite) {
-                    throw std::logic_error("Load invader sprites before spawning the invasion");
-                }
-                const auto& frame = sprite->definition().grid.frame;
-                largest.x = std::max(largest.x, frame.width * 0.45f);
-                largest.y = std::max(largest.y, frame.height * 0.45f);
-            }
-            const float column_spacing = std::min(
-                largest.x + 12.0f, std::max(0.0f, world_size.x - largest.x - 48.0f) / (columns - 1)
-            );
-            const float row_spacing = std::min(
-                largest.y + 8.0f, std::max(0.0f, world_size.y - PlayerActor::spawn_height - 150.0f) / (rows - 1)
-            );
-            const float first_x = (world_size.x - column_spacing * (columns - 1)) * 0.5f;
-            const float first_y = world_size.y - 100.0f - row_spacing * (rows - 1);
-
-            for (std::size_t column = 0; column < columns; ++column) {
-                for (std::size_t row = 0; row < rows; ++row) {
-                    auto& enemy = result->construct(
-                        types[row],
-                        glm::vec2{first_x + column * column_spacing, first_y + row * row_spacing},
-                        publisher
-                    );
-                    if (row == 0) {
-                        result->front_line.push_back(&enemy);
-                    }
-                }
-            }
-            // The saucer shares the allocation, but is outside the formation columns.
-            result->construct(
-                EnemyType::WOODIE, glm::vec2{world_size.x * 0.5f, world_size.y - 45.0f},
-                publisher
-            );
-            return result;
-        }
-
-        void refresh_front_line() {
-            front_line.clear();
-            for (std::size_t column = 0; column < columns; ++column) {
-                const auto first = column * rows;
-                for (std::size_t row = 0; row < rows; ++row) {
-                    auto& enemy = enemies[first + row];
-                    if (enemy.is_alive()) {
-                        front_line.push_back(&enemy);
-                        break;
-                    }
-                }
-            }
-        }
-
-        [[nodiscard]] std::optional<Bounds> formation_bounds() const {
-            std::optional<Bounds> result;
-            for (std::size_t i = 0; i < formation_size; ++i) {
-                if (!enemies[i].is_alive()) continue;
-                const auto shape = enemies[i].bounds();
-                if (!result) {
-                    result = shape;
-                } else {
-                    result->minimum = glm::min(result->minimum, shape.minimum);
-                    result->maximum = glm::max(result->maximum, shape.maximum);
-                }
-            }
-            return result;
-        }
+        static std::unique_ptr<Pool> create(const CE::Events::EventBus::Publisher& publisher, glm::vec2 world_size);
+        void refresh_front_line();
+        [[nodiscard]] std::optional<Bounds> formation_bounds() const;
     };
     std::unique_ptr<Pool> pool;
     CE::Events::EventBus::Publisher event_publisher;
@@ -151,59 +60,11 @@ public:
     : event_publisher(std::move(publisher)), world_size(world_size) {}
     ~Invasion() override = default;
 
-    [[nodiscard]] std::span<EnemyActor> enemies() noexcept {
-        return pool ? std::span<EnemyActor>{pool->enemies.data(), pool->enemies.size()} : std::span<EnemyActor>{};
-    }
-    [[nodiscard]] std::span<const EnemyActor> enemies() const noexcept {
-        return pool ? std::span<const EnemyActor>{pool->enemies.data(), pool->enemies.size()} : std::span<const EnemyActor>{};
-    }
-    void spawn() {
-        // Keep the current wave intact if allocation or a constructor fails.
-        pool = Pool::create(event_publisher, world_size);
-    }
-    void fire(int shots, std::default_random_engine& random) {
-        if (!pool || shots <= 0) return;
-        pool->refresh_front_line();
-        auto shooters = pool->front_line;
-        std::shuffle(shooters.begin(), shooters.end(), random);
-        const auto count = std::min(static_cast<std::size_t>(shots), shooters.size());
-        for (std::size_t i = 0; i < count; ++i)
-            shooters[i]->fire();
-    }
+    void fire(int shots, std::default_random_engine& random) const;
     // Returns {edge reached, remaining seconds}; horizontal is signed pixels/second.
-    [[nodiscard]] std::tuple<bool, double> move(double delta_seconds, double horizontal) {
-        if (!pool || delta_seconds <= 0.0 || horizontal == 0.0) return {false, 0.0};
-        const auto shape = pool->formation_bounds();
-        if (!shape) return {false, 0.0};
-        const bool right = horizontal > 0.0;
-        const double gap = right ? world_size.x - shape->maximum.x : shape->minimum.x;
-        if (gap <= 0.0) return {true, delta_seconds};
-
-        const double time_to_edge = gap / std::abs(horizontal);
-        const double movement_seconds = std::min(delta_seconds, time_to_edge);
-        for (std::size_t i = 0; i < formation_size; ++i) {
-            auto& enemy = pool->enemies[i];
-            if (enemy.is_alive()) enemy.move(movement_seconds, horizontal);
-        }
-        const bool edge_reached = delta_seconds >= time_to_edge;
-        return {edge_reached, edge_reached ? delta_seconds - movement_seconds : 0.0};
-    }
-    void descend() {
-        if (!pool) return;
-        for (std::size_t i = 0; i < formation_size; ++i) {
-            auto& enemy = pool->enemies[i];
-            if (enemy.is_alive()) enemy.translate({0.0f, -10.0f});
-        }
-        const auto shape = pool->formation_bounds();
-        if (shape && shape->minimum.y <= PlayerActor::spawn_height) {
-            event_publisher.notify(SpaceInvadersEvents::game_over_event, SpaceInvadersEvents::GameOver{});
-        }
-    }
-    void accelerate_animation(double factor) {
-        if (!pool) return;
-        for (std::size_t i = 0; i < formation_size; ++i)
-            pool->enemies[i].animation_speed *= factor;
-    }
+    [[nodiscard]] std::tuple<bool, double> move(double delta_seconds, double horizontal) const;
+    void descend() const;
+    void accelerate_animation(double factor) const;
 
     void init_platform(CE::Runtime::Context& engine) override {
         const auto size = engine.window().framebuffer_size();
@@ -213,16 +74,17 @@ public:
     void init_simulation() override { spawn(); }
     void deinit_platform() override { event_publisher = {}; }
     void deinit_simulation() override { pool.reset(); }
-    void update(const CE::Game::TickContext& tick) override {
-        if (!pool) return;
-        for (auto& enemy : pool->enemies)
-            enemy.update(tick);
-        pool->refresh_front_line();
+    void update(const CE::Game::TickContext& tick) override;
+    void append_draws(CE::Rendering::PassWriter& pass) const;
+
+    [[nodiscard]] std::span<EnemyActor> enemies() noexcept {
+        return pool ? std::span<EnemyActor>{pool->enemies.data(), pool->enemies.size()} : std::span<EnemyActor>{};
     }
-    void append_draws(CE::Rendering::PassWriter& pass) const {
-        if (!pool) return;
-        for (const auto& enemy : pool->enemies) {
-            if (enemy.is_alive()) enemy.append_draws(pass);
-        }
+    [[nodiscard]] std::span<const EnemyActor> enemies() const noexcept {
+        return pool ? std::span<const EnemyActor>{pool->enemies.data(), pool->enemies.size()} : std::span<const EnemyActor>{};
+    }
+    void spawn() {
+        // Keep the current wave intact if allocation or a constructor fails.
+        pool = Pool::create(event_publisher, world_size);
     }
 };

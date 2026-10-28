@@ -66,15 +66,5 @@ public:
     }
     void deinit_platform() override { controls = {}; }
     void deinit_simulation() override { detach(); }
-    void update(const CE::Game::TickContext& tick) override {
-        if (!actor) return;
-        const auto actions = tick.input.actions(controls);
-        const float direction = actions.axis(ActorActions::move).current
-            + (actions.button(ActorActions::left).held() ? -1.0f : 0.0f)
-            + (actions.button(ActorActions::right).held() ? 1.0f : 0.0f);
-        actor->move(tick.delta_seconds, direction * 160.0f);
-        if (actions.button(ActorActions::fire).pressed()) {
-            actor->fire();
-        }
-    }
+    void update(const CE::Game::TickContext& tick) override;
 };

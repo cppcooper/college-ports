@@ -39,7 +39,7 @@ protected:
 public:
     explicit SpaceInvaders(CE::Runtime::Context& engine, std::filesystem::path asset_root)
     : engine_context(engine), asset_root(std::move(asset_root)),
-      bullets([this](const int count) { invasion_controller.onBulletCountChanged(count); }),
+      bullets(player_controller, [this](const int count) { invasion_controller.onBulletCountChanged(count); }),
       ui(engine), ui_controller(ui), invasion_controller(invasion) {}
     ~SpaceInvaders() override = default;
 
