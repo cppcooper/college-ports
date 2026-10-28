@@ -21,9 +21,11 @@ public:
     ~ActorController() override = default;
     virtual void attach(ActorBase& target) { actor = &target; }
     virtual void detach() { actor = nullptr; }
+    [[nodiscard]] ActorBase* get_actor() const { return actor; }
 };
 
 struct ActorActions {
+    static constexpr double fire_cd = 0.2;
     static constexpr CE::Input::Actions::Id move{1};
     static constexpr CE::Input::Actions::Id left{2};
     static constexpr CE::Input::Actions::Id right{3};
@@ -32,6 +34,7 @@ struct ActorActions {
 
 class PlayerController final : public ActorController {
     CE::Input::Actions::Context controls;
+    double time_since_shot = 1;
 
 public:
     [[nodiscard]] static CE::Input::Actions::ContextDefinition defined_controls(const CE::Input::System& system) {
