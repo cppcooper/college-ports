@@ -19,6 +19,7 @@
 struct Appearance {
     std::shared_ptr<const CE::Assets::Sprites::Asset> sprite;
     CE::Assets::Grids::CellIndex cell = 0;
+    float alpha = 1.0f;
 };
 
 // Axis-aligned world bounds, with Y pointing up.
@@ -72,7 +73,11 @@ struct WorldObject : AbstractGameObject {
     }
     void translate(glm::vec2 displacement) { position += displacement; }
     virtual void append_draws(CE::Rendering::PassWriter& pass) const {
-        const auto image = appearance();
+        append_sprite(pass, appearance(), position);
+    }
+
+protected:
+    void append_sprite(CE::Rendering::PassWriter& pass, const Appearance& image, const glm::vec2 draw_position) const {
         if (!image.sprite) {
             throw std::logic_error("A world appearance needs a sprite");
         }
@@ -81,7 +86,8 @@ struct WorldObject : AbstractGameObject {
         };
         CE::Rendering::DrawStyle2D style;
         style.material = image.sprite->material;
-        style.model_matrix = glm::translate(glm::mat4{1.0f}, glm::vec3{position, 0.0f});
+        style.model_matrix = glm::translate(glm::mat4{1.0f}, glm::vec3{draw_position, 0.0f});
+        style.alpha = image.alpha;
         style.scale = scale;
         pass.add(CE::Rendering::Submission::resolve_sprite(*image.sprite, image.cell, style, context));
     }

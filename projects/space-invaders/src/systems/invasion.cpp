@@ -114,7 +114,7 @@ std::tuple<bool, double> Invasion::move(double delta_seconds, double horizontal)
     const double movement_seconds = std::min(delta_seconds, time_to_edge);
     for (std::size_t i = 0; i < formation_size; ++i) {
         auto& enemy = pool->enemies[i];
-        if (enemy.is_alive()) enemy.move(movement_seconds, horizontal);
+        enemy.move(movement_seconds, horizontal);
     }
     const bool edge_reached = delta_seconds >= time_to_edge;
     return {edge_reached, edge_reached ? delta_seconds - movement_seconds : 0.0};
@@ -124,7 +124,7 @@ void Invasion::descend() const {
     if (!pool) return;
     for (std::size_t i = 0; i < formation_size; ++i) {
         auto& enemy = pool->enemies[i];
-        if (enemy.is_alive()) enemy.translate({0.0f, -10.0f});
+        enemy.translate({0.0f, -10.0f});
     }
     const auto shape = pool->formation_bounds();
     if (shape && shape->minimum.y <= PlayerActor::spawn_height) {
@@ -148,6 +148,6 @@ void Invasion::update(const CE::Game::TickContext& tick) {
 void Invasion::append_draws(CE::Rendering::PassWriter& pass) const {
     if (!pool) return;
     for (const auto& enemy : pool->enemies) {
-        if (enemy.is_alive()) enemy.append_draws(pass);
+        enemy.append_draws(pass);
     }
 }
