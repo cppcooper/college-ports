@@ -36,26 +36,17 @@ void SpaceInvaders::init_simulation() {
         glm::vec2{size.width * 0.5f, PlayerActor::spawn_height},
         static_cast<float>(size.width)
     );
+
     player->init_simulation();
     invasion.init_simulation();
     bullets.init_simulation();
     ui.init_simulation();
 
     player_controller.attach(*player);
+
     ui_controller.init_simulation();
     player_controller.init_simulation();
     invasion_controller.init_simulation();
-}
-
-void SpaceInvaders::update(const CE::Game::TickContext& tick) {
-    ui_controller.update(tick);
-    player_controller.update(tick);
-    invasion_controller.update(tick);
-
-    if (player) player->update(tick);
-    invasion.update(tick);
-    bullets.update(tick);
-    ui.update(tick);
 }
 
 void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {

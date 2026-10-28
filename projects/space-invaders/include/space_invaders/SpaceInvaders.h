@@ -45,8 +45,16 @@ public:
 
     void init_platform() override;
     void init_simulation() override;
-    void update(const CE::Game::TickContext& tick) override;
     void prepare_render_frame(CE::Rendering::FrameWriter& frame) const override;
+    void update(const CE::Game::TickContext& tick) override {
+        ui_controller.update(tick);
+        player_controller.update(tick);
+        invasion_controller.update(tick);
+        if (player) player->update(tick);
+        invasion.update(tick);
+        bullets.update(tick);
+        ui.update(tick);
+    }
     void deinit_platform() override {
         invasion_controller.deinit_platform();
         player_controller.deinit_platform();
