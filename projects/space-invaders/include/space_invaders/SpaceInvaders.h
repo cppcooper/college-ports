@@ -3,6 +3,7 @@
 #include <cheryl/core/engine/engine-context.h>
 #include <cheryl/core/game-framework/abstract-game.h>
 #include <cheryl/core/rendering/camera.h>
+#include <cheryl/core/subsystems/event-bus.h>
 #include <cheryl/templates/observed-variables.h>
 
 #include <filesystem>
@@ -12,19 +13,24 @@
 #include <space_invaders/controllers/invasion.h>
 #include <space_invaders/controllers/player.h>
 #include <space_invaders/controllers/ui.h>
+#include <space_invaders/events.h>
 #include <space_invaders/gui/GameUI.h>
 #include <space_invaders/systems/bullet-mgr.h>
 #include <space_invaders/systems/invasion.h>
 
 class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Runtime::Context& engine_context;
-    CE::Rendering::Camera2D camera;
     std::filesystem::path asset_root;
 
     std::unique_ptr<PlayerActor> player;
-    Invasion invasion;
+    CE::Rendering::Camera2D camera;
     BulletManager bullets;
+    Invasion invasion;
     GameUI ui;
+
+    UIController ui_controller;
+    PlayerController player_controller;
+    InvasionController invasion_controller;
 
     CE::State::ObservedVariable<int> score{
         0, {[this](const int& value) { ui.set_score(value); }}
@@ -32,10 +38,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::State::ObservedVariable<int> lives{
         3, {[this](const int& value) { ui.set_lives(value); }}
     };
-
-    UIController ui_controller;
-    PlayerController player_controller;
-    InvasionController invasion_controller;
+    CE::Events::EventBus::Registration enemy_killed_listener;
 
 protected:
     void load_score();
@@ -49,7 +52,7 @@ public:
     : engine_context(engine), asset_root(std::move(asset_root)),
       bullets(player_controller, [this](const int count) { invasion_controller.onBulletCountChanged(count); }),
       ui(engine), ui_controller(ui), invasion_controller(invasion) {}
-    ~SpaceInvaders() override = default;
+    ~SpaceInvaders() override { enemy_killed_listener.disconnect(); }
 
     void init_platform() override;
     void init_simulation() override;
@@ -73,6 +76,8 @@ public:
         invasion.deinit_platform();
     }
     void deinit_simulation() override {
+        enemy_killed_listener.disconnect();
+        enemy_killed_listener = {};
         ui_controller.deinit_simulation();
         player_controller.deinit_simulation();
         invasion_controller.deinit_simulation();

@@ -8,6 +8,10 @@
 
 #include <space_invaders/game-objects/actors.h>
 
+void SpaceInvaders::increase_score(const int delta) {
+    score.set(score.get() + delta);
+}
+
 void SpaceInvaders::init_platform() {
     CE::Assets::Loading::Loader loader(asset_root);
     loader.load_assets(engine_context.resources());
@@ -49,6 +53,14 @@ void SpaceInvaders::init_simulation() {
     ui_controller.init_simulation();
     player_controller.init_simulation();
     invasion_controller.init_simulation();
+
+    enemy_killed_listener.disconnect();
+    enemy_killed_listener = engine_context.events().register_listener(
+        SpaceInvadersEvents::enemy_killed_event,
+        [this](const SpaceInvadersEvents::EnemyKilled& enemy) {
+            increase_score(enemy.points);
+        }
+    );
 }
 
 void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {

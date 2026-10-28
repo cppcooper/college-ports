@@ -132,7 +132,7 @@ void Invasion::descend() const {
     }
 }
 
-void Invasion::accelerate_animation(double factor) const {
+void Invasion::accelerate_animation(const double factor) const {
     if (!pool) return;
     for (std::size_t i = 0; i < formation_size; ++i)
         pool->enemies[i].animation_speed *= factor;

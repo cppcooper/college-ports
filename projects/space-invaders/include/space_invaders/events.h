@@ -24,4 +24,12 @@ namespace SpaceInvadersEvents {
     inline const CE::Events::EventChannel<ShotRequested> shot_requested_event{
         "space-invaders.actor-fired"
     };
+
+    struct EnemyKilled {
+        int points;
+    };
+
+    inline const CE::Events::EventChannel<EnemyKilled> enemy_killed_event{
+        "space-invaders.enemy-killed"
+    };
 }
