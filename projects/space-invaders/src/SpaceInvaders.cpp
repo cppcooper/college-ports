@@ -41,6 +41,8 @@ void SpaceInvaders::init_simulation() {
     invasion.init_simulation();
     bullets.init_simulation();
     ui.init_simulation();
+    ui.set_score(score.get());
+    ui.set_lives(lives.get());
 
     player_controller.attach(*player);
 

@@ -23,7 +23,6 @@ class GameUI final : public AbstractGameObject, public FrameRenderable {
     std::unique_ptr<HUD> hud;
     std::future<CE::UI::TGUI::Scene> pending;
     CE::UI::TGUI::Scene scene;
-    int score = 0;
 
 public:
     explicit GameUI(CE::Runtime::Context& engine);
@@ -38,6 +37,7 @@ public:
 
     void process_input(const CE::Game::TickContext& tick) const;
     void set_score(int value);
+    void set_lives(int value);
     void update(const CE::Game::TickContext& tick) override;
     void append_passes(CE::Rendering::FrameWriter& frame) const override;
 };

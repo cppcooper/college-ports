@@ -25,13 +25,17 @@ void GameUI::process_input(const CE::Game::TickContext& tick) const {
     if (session) session->handle_input(tick.input.records(), false);
 }
 
-void GameUI::set_score(const int value) { score = value; }
+void GameUI::set_score(const int value) {
+    if (hud) hud->set_score(value);
+}
+
+void GameUI::set_lives(const int value) {
+    if (hud) hud->set_lives(value);
+}
 
 void GameUI::update(const CE::Game::TickContext& tick) {
     if (!hud) return;
     session->update_time(tick.delta_seconds);
-    hud->set_score(score);
-    hud->update(tick);
 
     CE::UI::TGUI::adopt_scene(pending, scene);
     if (!pending.valid()) {

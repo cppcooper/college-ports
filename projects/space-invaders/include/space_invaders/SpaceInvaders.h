@@ -3,6 +3,7 @@
 #include <cheryl/core/engine/engine-context.h>
 #include <cheryl/core/game-framework/abstract-game.h>
 #include <cheryl/core/rendering/camera.h>
+#include <cheryl/templates/observed-variables.h>
 
 #include <filesystem>
 #include <memory>
@@ -24,6 +25,13 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     Invasion invasion;
     BulletManager bullets;
     GameUI ui;
+
+    CE::State::ObservedVariable<int> score{
+        0, {[this](const int& value) { ui.set_score(value); }}
+    };
+    CE::State::ObservedVariable<int> lives{
+        3, {[this](const int& value) { ui.set_lives(value); }}
+    };
 
     UIController ui_controller;
     PlayerController player_controller;

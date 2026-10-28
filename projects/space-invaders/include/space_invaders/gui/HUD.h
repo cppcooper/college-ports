@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cheryl/core/game-framework/tick-context.h>
 #include <cheryl/core/resources/asset-management/sprite-mgr.h>
 #include <cheryl/ui/tgui/session.h>
 
@@ -20,8 +19,6 @@ class HUD final {
 
     std::array<tgui::Picture::Ptr, 3> lives;
     tgui::Label::Ptr score;
-    int extra_lives = 0;
-    int score_value = 0;
 
 public:
     explicit HUD(CE::UI::TGUI::Session& session)
@@ -29,13 +26,13 @@ public:
         create_widgets();
     }
 
-    void set_score(int value) { score_value = value; }
+    void set_score(int value) const {
+        score->setText(std::format("Score: {}", value));
+    }
 
-    // The game supplies its reserve-life count; the HUD only displays it.
-    void update(const CE::Game::TickContext& tick) {
-        score->setText(std::format("Score: {}", score_value));
-        for (std::size_t i = 0; i < lives.size(); ++i)
-            lives[i]->setVisible(i < extra_lives);
+    void set_lives(const int value) const {
+        for (int i = 0; i < lives.size(); ++i)
+            lives[i]->setVisible(i < value);
     }
 
 private:
