@@ -1,4 +1,6 @@
 #include <space_invaders/systems/bullet-mgr.h>
+#include <space_invaders/game-objects/actors.h>
+#include <space_invaders/systems/invasion.h>
 
 void BulletManager::init_simulation() {
     if (!events) {
@@ -24,7 +26,26 @@ void BulletManager::update(const CE::Game::TickContext& tick) {
         return shape.maximum.y < 0.0f || shape.minimum.y > world_size.y;
     });
     if (removed) report_count();
-    // Actor collision responses remain unfinished.
+}
+
+void BulletManager::detect_collisions(PlayerActor* p, Invasion* i) {
+    const auto removed = std::erase_if(bullets, [p, i](const auto& bullet) {
+        const auto shape = bullet->bounds();
+        if (bullet->is_players()) {
+            if (!i) return false;
+            for (auto& enemy : i->enemies()) {
+                if (enemy.is_alive() && shape.overlaps(enemy.bounds())) {
+                    enemy.hit();
+                    return true;
+                }
+            }
+        } else if (p && p->is_alive() && shape.overlaps(p->bounds())) {
+            p->hit();
+            return true;
+        }
+        return false;
+    });
+    if (removed) report_count();
 }
 
 void BulletManager::append_draws(CE::Rendering::PassWriter& pass) const {

@@ -40,4 +40,8 @@ public:
     void update(const CE::Game::TickContext& tick) override {
         translate({0.0f, static_cast<float>(speed * tick.delta_seconds)});
     }
+
+    [[nodiscard]] bool is_players() const {
+        return speed > 0;
+    }
 };

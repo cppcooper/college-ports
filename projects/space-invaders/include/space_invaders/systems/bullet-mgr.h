@@ -19,7 +19,9 @@
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/game-objects/bullets.h>
 
+class PlayerActor;
 class PlayerController;
+class Invasion;
 
 class BulletManager final : public AbstractGameObject {
     std::vector<std::unique_ptr<Bullet>> bullets;
@@ -53,6 +55,7 @@ public:
     void init_simulation() override;
     void append_draws(CE::Rendering::PassWriter& pass) const;
     void update(const CE::Game::TickContext& tick) override;
+    void detect_collisions(PlayerActor* p, Invasion* i);
 
     void deinit_simulation() override {
         unregister_listener();

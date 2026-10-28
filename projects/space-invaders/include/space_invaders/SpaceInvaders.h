@@ -53,6 +53,7 @@ public:
         if (player) player->update(tick);
         invasion.update(tick);
         bullets.update(tick);
+        bullets.detect_collisions(player.get(), &invasion);
         ui.update(tick);
     }
     void deinit_platform() override {
