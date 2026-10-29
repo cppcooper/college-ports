@@ -29,21 +29,26 @@ void BulletManager::update(const CE::Game::TickContext& tick) {
     if (removed) report_count();
 }
 
-void BulletManager::detect_collisions(PlayerActor* p, Invasion* i) {
+void BulletManager::detect_collisions(PlayerActor* p, Invasion* i, EnemyActor* ufo) {
     if (clear_requested) {
         clear_bullets();
         return;
     }
-    const auto removed = std::erase_if(bullets, [this, p, i](const auto& bullet) {
+    const auto removed = std::erase_if(bullets, [this, p, i, ufo](const auto& bullet) {
         if (clear_requested) return true;
         const auto shape = bullet->bounds();
         if (bullet->is_players()) {
-            if (!i) return false;
-            for (auto& enemy : i->enemies()) {
-                if (enemy.is_alive() && shape.overlaps(enemy.bounds())) {
-                    enemy.hit();
-                    return true;
+            if (i) {
+                for (auto& enemy : i->enemies()) {
+                    if (enemy.is_alive() && shape.overlaps(enemy.bounds())) {
+                        enemy.hit();
+                        return true;
+                    }
                 }
+            }
+            if (ufo && ufo->is_alive() && shape.overlaps(ufo->bounds())) {
+                ufo->hit();
+                return true;
             }
         } else if (p && p->is_alive() && shape.overlaps(p->bounds())) {
             p->hit();

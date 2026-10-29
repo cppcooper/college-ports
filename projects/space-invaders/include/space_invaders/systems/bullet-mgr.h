@@ -21,6 +21,7 @@
 
 class PlayerActor;
 class PlayerController;
+class EnemyActor;
 class Invasion;
 
 class BulletManager final : public AbstractGameObject {
@@ -63,7 +64,7 @@ public:
     void init_simulation() override;
     void append_draws(CE::Rendering::PassWriter& pass) const;
     void update(const CE::Game::TickContext& tick) override;
-    void detect_collisions(PlayerActor* p, Invasion* i);
+    void detect_collisions(PlayerActor* p, Invasion* i, EnemyActor* ufo = nullptr);
 
     void deinit_simulation() override {
         unregister_listener();

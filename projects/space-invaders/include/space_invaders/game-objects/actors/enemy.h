@@ -30,6 +30,9 @@ public:
     EnemyActor(const EnemyType type, const glm::vec2 position, const int id, CE::Events::EventBus::Publisher publisher)
     : ActorBase(GetEnemySprite(type), std::move(publisher), position),
       animation(sprite->animation("default")), type(type), id(id) {}
+    [[nodiscard]] bool is_exploding() const noexcept {
+        return is_shot && explosion_elapsed < explosion_duration_seconds;
+    }
     [[nodiscard]] Appearance appearance() const override {
         if (is_shot) {
             return {

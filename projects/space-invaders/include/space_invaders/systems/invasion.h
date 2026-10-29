@@ -54,7 +54,6 @@ public:
     static constexpr std::size_t columns = 10;
     static constexpr std::size_t rows = 7;
     static constexpr std::size_t formation_size = columns * rows;
-    static constexpr std::size_t enemy_count = formation_size + 1; // Last slot is the saucer.
 
     explicit Invasion(CE::Events::EventBus::Publisher publisher = {}, const glm::vec2 world_size = {1, 1})
     : event_publisher(std::move(publisher)), world_size(world_size) {}

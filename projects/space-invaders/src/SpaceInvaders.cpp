@@ -68,6 +68,13 @@ void SpaceInvaders::init_simulation() {
 
     player->init_simulation();
     invasion.init_simulation();
+    ufo = std::make_unique<EnemyActor>(
+        EnemyType::WOODIE,
+        glm::vec2{size.width * 0.5f, size.height - 45.0f},
+        static_cast<int>(Invasion::formation_size),
+        engine_context.events().publisher()
+    );
+    ufo->init_simulation();
     bullets.init_simulation();
     ui.init_simulation();
     ui.set_score(score.get());
@@ -121,6 +128,7 @@ void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) cons
         auto pass = frame.begin_pass(camera.projection_matrix(), camera.view_matrix());
         if (player && !is_game_over) player->append_draws(pass);
         invasion.append_draws(pass);
+        if (ufo) ufo->append_draws(pass);
         bullets.append_draws(pass);
     }
     ui.append_passes(frame);

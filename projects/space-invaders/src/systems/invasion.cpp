@@ -4,7 +4,7 @@ Invasion::Pool::~Pool() {
     auto* storage = enemies.data();
     for (auto i = enemies.size(); i > 0; --i)
         Traits::destroy(allocator, storage + i - 1);
-    if (storage) Traits::deallocate(allocator, storage, enemy_count);
+    if (storage) Traits::deallocate(allocator, storage, formation_size);
 }
 
 EnemyActor& Invasion::Pool::construct(const EnemyType type, const glm::vec2 position, const CE::Events::EventBus::Publisher& publisher) {
@@ -18,7 +18,7 @@ EnemyActor& Invasion::Pool::construct(const EnemyType type, const glm::vec2 posi
 std::unique_ptr<Invasion::Pool> Invasion::Pool::create(const CE::Events::EventBus::Publisher& publisher, const glm::vec2 world_size) {
     auto result = std::make_unique<Pool>();
     result->front_line.reserve(columns);
-    result->enemies = {Traits::allocate(result->allocator, enemy_count), 0};
+    result->enemies = {Traits::allocate(result->allocator, formation_size), 0};
     constexpr std::array types{
         EnemyType::MALOLRIE, EnemyType::ARCHER, EnemyType::LANA, EnemyType::CHERYL,
         EnemyType::CYRIL, EnemyType::RAY, EnemyType::KRIEGER
@@ -55,11 +55,6 @@ std::unique_ptr<Invasion::Pool> Invasion::Pool::create(const CE::Events::EventBu
             }
         }
     }
-    // The saucer shares the allocation, but is outside the formation columns.
-    result->construct(
-        EnemyType::WOODIE, glm::vec2{world_size.x * 0.5f, world_size.y - 45.0f},
-        publisher
-    );
     return result;
 }
 
@@ -140,8 +135,14 @@ void Invasion::accelerate_animation(const double factor) const {
 
 void Invasion::update(const CE::Game::TickContext& tick) {
     if (!pool) return;
-    for (auto& enemy : pool->enemies)
+    for (auto& enemy : pool->enemies) {
         enemy.update(tick);
+    }
+    if (std::ranges::none_of(pool->enemies, [](const auto& enemy) {
+        return enemy.is_alive() || enemy.is_exploding();
+    })) {
+        spawn();
+    }
     pool->refresh_front_line();
 }
 

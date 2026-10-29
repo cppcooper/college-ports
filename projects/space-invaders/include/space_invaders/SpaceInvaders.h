@@ -23,6 +23,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     std::filesystem::path asset_root;
 
     std::unique_ptr<PlayerActor> player;
+    std::unique_ptr<EnemyActor> ufo;
     CE::Rendering::Camera2D camera;
     BulletManager bullets;
     Invasion invasion;
@@ -67,13 +68,14 @@ public:
         ui_controller.update(tick);
         if (!is_game_over && player) player->update(tick);
         if (!is_game_over) invasion.update(tick);
+        if (!is_game_over && ufo) ufo->update(tick);
         if (!is_game_over) {
             player_controller.update(tick);
             invasion_controller.update(tick);
         }
         if (!is_game_over) {
             bullets.update(tick);
-            bullets.detect_collisions(player.get(), &invasion);
+            bullets.detect_collisions(player.get(), &invasion, ufo.get());
         }
         ui.update(tick);
     }
@@ -93,6 +95,8 @@ public:
         invasion_controller.deinit_simulation();
         bullets.deinit_simulation();
         invasion.deinit_simulation();
+        if (ufo) ufo->deinit_simulation();
+        ufo.reset();
         if (player) player->deinit_simulation();
         player.reset();
         ui.deinit_simulation();
