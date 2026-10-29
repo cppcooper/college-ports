@@ -189,6 +189,7 @@ void SpaceInvaders::init_platform() {
     CE::Assets::Loading::Loader loader(asset_root);
     loader.load_assets(engine_context.resources());
     enemy_material = make_enemy_material(engine_context.resources());
+    audio.load(asset_root, Invasion::columns + 1);
 
     CE::Text::FontSelection font_selection;
     font_selection.automatic_system_fonts = true;
@@ -279,6 +280,7 @@ void SpaceInvaders::init_simulation() {
         SpaceInvadersEvents::menu_action_event,
         [this](const SpaceInvadersEvents::MenuActionRequested& request) { handle_menu_action(request); }
     );
+    audio.start(engine_context.events());
 }
 
 void SpaceInvaders::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {

@@ -9,6 +9,7 @@ target_include_directories(space_invaders PRIVATE include)
 
 target_link_libraries(space_invaders PRIVATE
     Cheryl::OpenGL::Startup
+    Cheryl::Audio::Miniaudio
     Cheryl::UI::TGUI
     Cheryl::UI::RmlUi)
 

@@ -10,11 +10,13 @@
 #include <memory>
 #include <utility>
 
+#include <space_invaders/audio.h>
 #include <space_invaders/controllers/invasion.h>
 #include <space_invaders/controllers/player.h>
 #include <space_invaders/controllers/ui.h>
 #include <space_invaders/controllers/ufo.h>
 #include <space_invaders/events.h>
+#include <space_invaders/game-speed.h>
 #include <space_invaders/gui/GameUI.h>
 #include <space_invaders/high-scores.h>
 #include <space_invaders/systems/bullet-mgr.h>
@@ -24,6 +26,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Runtime::Context& engine_context;
     std::filesystem::path asset_root;
     HighScores high_scores;
+    GameAudio audio;
 
     std::unique_ptr<PlayerActor> player;
     std::unique_ptr<EnemyActor> ufo;
@@ -85,11 +88,13 @@ public:
         const bool was_paused = paused;
         ui_controller.update(tick);
         if (quit_requested) {
+            audio.update(true, game_speed);
             tick.request_stop();
             return;
         }
         // Keep UI responsive and discard gameplay edges from the resume tick.
         if (paused || was_paused) {
+            audio.update(paused, game_speed);
             ui.update(tick);
             return;
         }
@@ -108,10 +113,12 @@ public:
             bullets.update(tick);
             bullets.detect_collisions(player.get(), &invasion, ufo.get());
         }
+        audio.update(paused, game_speed);
         ui.update(tick);
     }
     void deinit_platform() override {
         unregister_listeners();
+        audio.close();
         invasion_controller.deinit_platform();
         ufo_controller.deinit_platform();
         player_controller.deinit_platform();
@@ -123,6 +130,7 @@ public:
     }
     void deinit_simulation() override {
         unregister_listeners();
+        audio.stop();
         ui_controller.deinit_simulation();
         player_controller.deinit_simulation();
         ufo_controller.deinit_simulation();
