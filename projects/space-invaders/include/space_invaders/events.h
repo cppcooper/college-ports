@@ -9,6 +9,12 @@ namespace SpaceInvadersEvents {
     struct PauseToggle {};
     inline const CE::Events::EventChannel<PauseToggle> pause_toggle_event{"space-invaders.pause-toggle"};
 
+    struct PauseRequested { bool paused; };
+    inline const CE::Events::EventChannel<PauseRequested> pause_requested_event{"space-invaders.pause-requested"};
+
+    struct QuitRequested {};
+    inline const CE::Events::EventChannel<QuitRequested> quit_requested_event{"space-invaders.quit-requested"};
+
     enum class MenuAction { HighScores, Back, Quit, SubmitScore, SkipScore };
     struct MenuActionRequested {
         MenuAction action;

@@ -30,7 +30,7 @@ class GameUI final : public AbstractGameObject, public FrameRenderable {
     CE::UI::TGUI::Scene scene;
 
 public:
-    GameUI(CE::Runtime::Context& engine, const std::filesystem::path& asset_root);
+    GameUI(CE::Runtime::Context& engine, const std::filesystem::path& asset_root, std::filesystem::path high_score_file);
     ~GameUI() override = default;
     GameUI(const GameUI&) = delete;
     GameUI& operator=(const GameUI&) = delete;

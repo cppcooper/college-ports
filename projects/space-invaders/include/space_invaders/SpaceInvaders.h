@@ -18,14 +18,12 @@
 #include <space_invaders/events.h>
 #include <space_invaders/game-speed.h>
 #include <space_invaders/gui/GameUI.h>
-#include <space_invaders/high-scores.h>
 #include <space_invaders/systems/bullet-mgr.h>
 #include <space_invaders/systems/invasion.h>
 
 class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Runtime::Context& engine_context;
     std::filesystem::path asset_root;
-    HighScores high_scores;
     GameAudio audio;
 
     std::unique_ptr<PlayerActor> player;
@@ -51,19 +49,14 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Events::EventBus::Registration player_hit_listener;
     CE::Events::EventBus::Registration player_death_animation_finished_listener;
     CE::Events::EventBus::Registration game_over_listener;
-    CE::Events::EventBus::Registration pause_toggle_listener;
-    CE::Events::EventBus::Registration menu_action_listener;
+    CE::Events::EventBus::Registration pause_listener;
+    CE::Events::EventBus::Registration quit_listener;
     bool is_game_over = false;
     bool paused = false;
-    bool score_resolved = false;
-    bool quit_after_score = false;
     bool quit_requested = false;
 
     void unregister_listeners();
     void spawn_ufo();
-    void toggle_pause();
-    void finish_run(bool quitting);
-    void handle_menu_action(const SpaceInvadersEvents::MenuActionRequested& request);
 
 protected:
     void increase_score(int delta);
@@ -75,9 +68,9 @@ public:
         CE::Runtime::Context& engine, std::filesystem::path asset_root,
         std::filesystem::path high_score_file = "highscore.txt"
     )
-    : engine_context(engine), asset_root(std::move(asset_root)), high_scores(std::move(high_score_file)),
+    : engine_context(engine), asset_root(std::move(asset_root)),
       bullets(player_controller, [this](const int count) { invasion_controller.onBulletCountChanged(count); }),
-      ui(engine, this->asset_root), ui_controller(ui), invasion_controller(invasion) {}
+      ui(engine, this->asset_root, std::move(high_score_file)), ui_controller(ui), invasion_controller(invasion) {}
     ~SpaceInvaders() override { unregister_listeners(); }
 
     void init_platform() override;

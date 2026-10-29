@@ -37,10 +37,13 @@ namespace {
     }
 }
 
-GameMenu::GameMenu(CE::Runtime::Context& engine, const std::filesystem::path& asset_root)
-: engine(engine), document_file(asset_root / "graphics/ui/game-menu.rml"), events(engine.events().publisher()) {}
+GameMenu::GameMenu(
+    CE::Runtime::Context& engine, const std::filesystem::path& asset_root, std::filesystem::path high_score_file
+)
+: engine(engine), document_file(asset_root / "graphics/ui/game-menu.rml"), high_scores(std::move(high_score_file)),
+  events(engine.events().publisher()) {}
 
-GameMenu::~GameMenu() = default;
+GameMenu::~GameMenu() { unregister_listeners(); }
 
 void GameMenu::init_platform(CE::Runtime::Context&) {
     platform.emplace(engine.platform_dispatcher().submission());
@@ -52,6 +55,9 @@ void GameMenu::init_simulation() {
         throw std::logic_error("Initialize the menu platform before simulation.");
     if (session)
         return;
+    high_scores.load();
+    current_score = 0;
+    score_resolved = quit_after_score = false;
     session = std::make_unique<CE::UI::RmlUi::Session>(engine, 3, CE::UI::RmlUi::SessionOptions{.automatic_view = true});
     const auto source = document_file.u8string();
     document = session->context().LoadDocument(Rml::String(source.begin(), source.end()));
@@ -65,7 +71,89 @@ void GameMenu::init_simulation() {
     document->AddEventListener("submit", listener.get());
     document->AddEventListener("change", listener.get());
     document->Hide();
+    pause_toggle_listener = engine.events().register_listener(
+        SpaceInvadersEvents::pause_toggle_event,
+        [this](const SpaceInvadersEvents::PauseToggle&) { toggle_pause(); }
+    );
+    menu_action_listener = engine.events().register_listener(
+        SpaceInvadersEvents::menu_action_event,
+        [this](const SpaceInvadersEvents::MenuActionRequested& request) { handle_menu_action(request); }
+    );
+    game_over_listener = engine.events().register_listener(
+        SpaceInvadersEvents::game_over_event,
+        [this](const SpaceInvadersEvents::GameOver&) { finish_run(false); }
+    );
 }
+
+void GameMenu::toggle_pause() {
+    // Score entry must be saved or explicitly skipped before leaving this page.
+    if (current_page == Page::ScoreEntry) return;
+    const bool paused = current_page == Page::Hidden;
+    events.notify(SpaceInvadersEvents::pause_requested_event, SpaceInvadersEvents::PauseRequested{paused});
+    if (paused) show_pause();
+    else hide();
+}
+
+void GameMenu::finish_run(const bool quitting) {
+    quit_after_score = quitting;
+    events.notify(SpaceInvadersEvents::pause_requested_event, SpaceInvadersEvents::PauseRequested{true});
+    if (!score_resolved && high_scores.qualifies(current_score))
+        show_score_entry(current_score, quitting);
+    else if (quitting)
+        events.notify(SpaceInvadersEvents::quit_requested_event, SpaceInvadersEvents::QuitRequested{});
+    else
+        show_scores(high_scores.entries());
+}
+
+void GameMenu::handle_menu_action(const SpaceInvadersEvents::MenuActionRequested& request) {
+    using namespace SpaceInvadersEvents;
+    switch (request.action) {
+    case MenuAction::HighScores:
+        if (current_page != Page::ScoreEntry) {
+            events.notify(pause_requested_event, PauseRequested{true});
+            show_scores(high_scores.entries());
+        }
+        break;
+    case MenuAction::Back:
+        if (current_page != Page::ScoreEntry) {
+            events.notify(pause_requested_event, PauseRequested{true});
+            show_pause();
+        }
+        break;
+    case MenuAction::Quit:
+        finish_run(true);
+        break;
+    case MenuAction::SubmitScore:
+        if (current_page != Page::ScoreEntry || score_resolved) break;
+        try {
+            if (!high_scores.add(current_score, request.name))
+                throw std::runtime_error("This score no longer qualifies for the top 10.");
+            score_resolved = true;
+            if (quit_after_score) events.notify(quit_requested_event, QuitRequested{});
+            else show_scores(high_scores.entries());
+        } catch (const std::exception& error) {
+            show_error(error.what());
+        }
+        break;
+    case MenuAction::SkipScore:
+        if (current_page != Page::ScoreEntry) break;
+        score_resolved = true;
+        if (quit_after_score) events.notify(quit_requested_event, QuitRequested{});
+        else show_scores(high_scores.entries());
+        break;
+    }
+}
+
+void GameMenu::unregister_listeners() {
+    pause_toggle_listener.disconnect();
+    pause_toggle_listener = {};
+    menu_action_listener.disconnect();
+    menu_action_listener = {};
+    game_over_listener.disconnect();
+    game_over_listener = {};
+}
+
+void GameMenu::deinit_simulation() { unregister_listeners(); }
 
 void GameMenu::show(const Page page, const char* focus) {
     if (!document)
@@ -185,6 +273,7 @@ void GameMenu::append_passes(CE::Rendering::FrameWriter& frame) const {
 }
 
 void GameMenu::deinit_platform() {
+    unregister_listeners();
     pending = {};
     scene = {};
     requests.clear();

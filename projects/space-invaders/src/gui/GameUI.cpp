@@ -1,9 +1,12 @@
 #include <space_invaders/gui/GameUI.h>
 
 #include <stdexcept>
+#include <utility>
 
-GameUI::GameUI(CE::Runtime::Context& engine, const std::filesystem::path& asset_root)
-: engine(engine), menu(engine, asset_root) {}
+GameUI::GameUI(
+    CE::Runtime::Context& engine, const std::filesystem::path& asset_root, std::filesystem::path high_score_file
+)
+: engine(engine), menu(engine, asset_root, std::move(high_score_file)) {}
 
 void GameUI::init_platform(CE::Runtime::Context&) {
     platform.emplace(engine.platform_dispatcher().submission());
@@ -37,6 +40,7 @@ bool GameUI::process_input(const CE::Game::TickContext& tick) {
 }
 
 void GameUI::set_score(const int value) {
+    menu.set_score(value);
     if (hud) hud->set_score(value);
 }
 
@@ -65,6 +69,7 @@ void GameUI::append_passes(CE::Rendering::FrameWriter& frame) const {
 }
 
 void GameUI::deinit_simulation() {
+    menu.deinit_simulation();
     // Retain session/upload dependencies until accepted platform work settles.
 }
 
