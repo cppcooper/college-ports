@@ -39,7 +39,8 @@ private:
     void create_widgets() {
         score = tgui::Label::create("Score: 0");
         score->setTextSize(24);
-        score->setSize({220, 32});
+        score->setAutoSize(true);
+        score->setIgnoreMouseEvents(true);
         session.gui().add(score);
         session.set_layout(score, {
             .anchor = {0, 0},
