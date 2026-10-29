@@ -9,7 +9,7 @@
 int main(int argc, char** argv) {
     std::filesystem::path asset_root = "/mnt/projects/assets";
     auto startup = CE::Application::GLFWOpenGL::make_startup(
-        "Bullet Hell Space Invaders!!", {.title = "Hell Invaders!! (from space)"}
+        "Bullet Hell Space Invaders!!", {.width = 900, .title = "Hell Invaders!! (from space)"}
     );
     startup.add_application_options([&asset_root](CLI::App& options) {
         options.add_option("--assets", asset_root, "Game asset directory")->default_str(asset_root);
