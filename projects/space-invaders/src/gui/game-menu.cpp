@@ -159,6 +159,13 @@ void GameMenu::unregister_listeners() {
 
 void GameMenu::deinit_simulation() { unregister_listeners(); }
 
+void GameMenu::reset_run() {
+    current_score = 0;
+    score_resolved = quit_after_score = false;
+    requests.clear();
+    hide();
+}
+
 void GameMenu::show(const Page page, const char* focus) {
     if (!document)
         return;

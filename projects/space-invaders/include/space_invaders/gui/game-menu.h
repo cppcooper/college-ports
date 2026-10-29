@@ -67,6 +67,7 @@ public:
     bool process_input(const CE::Game::TickContext& tick);
     [[nodiscard]] Page page() const { return current_page; }
     void set_score(int value) { current_score = value; }
+    void reset_run();
     void show_pause();
     void show_scores(const HighScores::Table& scores);
     void show_score_entry(int score, bool quit_after_save);

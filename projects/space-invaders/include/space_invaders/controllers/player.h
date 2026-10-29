@@ -72,6 +72,7 @@ public:
         controls = input.action_contexts().attach(defined_controls(input));
     }
     void deinit_platform() override { controls = {}; }
+    void init_simulation() override { time_since_shot = 1.0; }
     void deinit_simulation() override { detach(); }
     void update(const CE::Game::TickContext& tick) override;
 };

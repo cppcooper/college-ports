@@ -102,6 +102,8 @@ void SpaceInvaders::unregister_listeners() {
     pause_listener = {};
     quit_listener.disconnect();
     quit_listener = {};
+    new_game_listener.disconnect();
+    new_game_listener = {};
 }
 
 void SpaceInvaders::spawn_ufo() {
@@ -120,6 +122,34 @@ void SpaceInvaders::spawn_ufo() {
     ufo->init_simulation();
     ufo_controller.attach(*ufo);
     ufo_controller.init_simulation();
+}
+
+void SpaceInvaders::reset_game() {
+    // Run between input processing and world updates, after collision iteration
+    // and the menu's input batch have finished using the previous actors.
+    player_controller.deinit_simulation();
+    if (player) player->deinit_simulation();
+    game_speed = 1.0;
+    is_game_over = paused = quit_requested = new_game_requested = false;
+    score.set(0);
+    lives.set(3);
+
+    const auto size = camera.framebuffer_size();
+    player = std::make_unique<PlayerActor>(
+        engine_context.events().publisher(),
+        glm::vec2{size.width * 0.5f, PlayerActor::spawn_height},
+        static_cast<float>(size.width)
+    );
+    player->init_simulation();
+    player_controller.attach(*player);
+    player_controller.init_simulation();
+
+    bullets.reset();
+    invasion.init_simulation();
+    invasion_controller.init_simulation();
+    spawn_ufo();
+    ui.reset_run(score.get(), lives.get());
+    audio.restart();
 }
 
 void SpaceInvaders::init_platform() {
@@ -149,30 +179,10 @@ void SpaceInvaders::init_platform() {
 
 void SpaceInvaders::init_simulation() {
     unregister_listeners();
-    game_speed = 1.0;
-    is_game_over = false;
-    paused = quit_requested = false;
-    const auto size = camera.framebuffer_size();
-    player = std::make_unique<PlayerActor>(
-        engine_context.events().publisher(),
-        glm::vec2{size.width * 0.5f, PlayerActor::spawn_height},
-        static_cast<float>(size.width)
-    );
-
-    player->init_simulation();
-    invasion.init_simulation();
-    spawn_ufo();
     bullets.init_simulation();
     ui.init_simulation();
-    ui.set_score(score.get());
-    ui.set_lives(lives.get());
-    ui.set_game_over(false);
-
-    player_controller.attach(*player);
-
     ui_controller.init_simulation();
-    player_controller.init_simulation();
-    invasion_controller.init_simulation();
+    reset_game();
 
     enemy_killed_listener = engine_context.events().register_listener(
         SpaceInvadersEvents::enemy_killed_event,
@@ -215,6 +225,10 @@ void SpaceInvaders::init_simulation() {
     quit_listener = engine_context.events().register_listener(
         SpaceInvadersEvents::quit_requested_event,
         [this](const SpaceInvadersEvents::QuitRequested&) { quit_requested = true; }
+    );
+    new_game_listener = engine_context.events().register_listener(
+        SpaceInvadersEvents::new_game_requested_event,
+        [this](const SpaceInvadersEvents::NewGameRequested&) { new_game_requested = true; }
     );
     audio.start(engine_context.events());
 }

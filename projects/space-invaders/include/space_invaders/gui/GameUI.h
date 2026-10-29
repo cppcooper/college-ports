@@ -45,6 +45,7 @@ public:
     void set_score(int value);
     void set_lives(int value);
     void set_game_over(bool value);
+    void reset_run(int score, int lives);
     void update(const CE::Game::TickContext& tick) override;
     void append_passes(CE::Rendering::FrameWriter& frame) const override;
 };

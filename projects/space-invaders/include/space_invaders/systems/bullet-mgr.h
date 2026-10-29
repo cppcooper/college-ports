@@ -54,6 +54,8 @@ public:
     ~BulletManager() override { unregister_listener(); }
 
     [[nodiscard]] std::size_t count() const noexcept { return bullets.size(); }
+    // Clear a completed run without replacing its shot listener or sprite pool.
+    void reset() { clear_bullets(); }
     // PlayerHit can fire during collision iteration; clear after that pass finishes.
     void onPlayerHit() { clear_requested = true; }
     void init_platform(CE::Runtime::Context& engine) override {

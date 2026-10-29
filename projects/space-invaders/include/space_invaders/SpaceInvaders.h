@@ -51,12 +51,15 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     CE::Events::EventBus::Registration game_over_listener;
     CE::Events::EventBus::Registration pause_listener;
     CE::Events::EventBus::Registration quit_listener;
+    CE::Events::EventBus::Registration new_game_listener;
     bool is_game_over = false;
     bool paused = false;
     bool quit_requested = false;
+    bool new_game_requested = false;
 
     void unregister_listeners();
     void spawn_ufo();
+    void reset_game();
 
 protected:
     void increase_score(int delta);
@@ -83,6 +86,12 @@ public:
         if (quit_requested) {
             audio.update(true, game_speed);
             tick.request_stop();
+            return;
+        }
+        if (new_game_requested) {
+            reset_game();
+            audio.update(false, game_speed);
+            ui.update(tick);
             return;
         }
         // Keep UI responsive and discard gameplay edges from the resume tick.

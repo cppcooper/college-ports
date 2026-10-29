@@ -19,6 +19,7 @@ public:
     void load(const std::filesystem::path& asset_root, std::size_t maximum_enemy_volley);
     void start(CE::Events::EventBus& events);
     void update(bool paused, double game_speed);
+    void restart();
     void stop();
     void close();
 };

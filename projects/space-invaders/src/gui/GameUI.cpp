@@ -52,6 +52,13 @@ void GameUI::set_game_over(const bool value) {
     if (game_over_label) game_over_label->setVisible(value);
 }
 
+void GameUI::reset_run(const int score, const int lives) {
+    menu.reset_run();
+    set_score(score);
+    set_lives(lives);
+    set_game_over(false);
+}
+
 void GameUI::update(const CE::Game::TickContext& tick) {
     if (!hud) return;
     session->update_time(tick.delta_seconds);

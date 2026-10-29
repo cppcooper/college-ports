@@ -182,6 +182,20 @@ void GameAudio::update(const bool paused, const double game_speed) {
     }
 }
 
+void GameAudio::restart() {
+    if (!state || !state->started) return;
+    try {
+        state->stop_effects();
+        state->music->set_playback_rate(1.0f);
+        state->music_rate = 1.0f;
+        state->music->restart();
+        state->suspended = false;
+    } catch (const std::exception& error) {
+        std::cerr << "[space-invaders] Audio stopped: " << error.what() << '\n';
+        close();
+    }
+}
+
 void GameAudio::stop() {
     if (!state) return;
     state->shot_listener.disconnect();
