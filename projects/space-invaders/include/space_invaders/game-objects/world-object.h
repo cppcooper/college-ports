@@ -9,6 +9,7 @@
 #include <glm/common.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 #include <memory>
 #include <stdexcept>
@@ -20,6 +21,8 @@ struct Appearance {
     std::shared_ptr<const CE::Assets::Sprites::Asset> sprite;
     CE::Assets::Grids::CellIndex cell = 0;
     float alpha = 1.0f;
+    std::shared_ptr<const CE::Rendering::Resources::Material> material;
+    glm::vec3 tint{1.0f};
 };
 
 // Axis-aligned world bounds, with Y pointing up.
@@ -85,10 +88,11 @@ protected:
             pass.semantics(), pass.parameters(), pass.constraints()
         };
         CE::Rendering::DrawStyle2D style;
-        style.material = image.sprite->material;
+        style.material = image.material ? image.material : image.sprite->material;
         style.model_matrix = glm::translate(glm::mat4{1.0f}, glm::vec3{draw_position, 0.0f});
         style.alpha = image.alpha;
         style.scale = scale;
+        if (image.material) style.parameters.emplace("tint", image.tint);
         pass.add(CE::Rendering::Submission::resolve_sprite(*image.sprite, image.cell, style, context));
     }
 };

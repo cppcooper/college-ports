@@ -1,12 +1,77 @@
 #include <space_invaders/SpaceInvaders.h>
 
+#include <cheryl/assets/resources/resource-provider.h>
+#include <cheryl/assets/resources/shader-asset-builder.h>
 #include <cheryl/core/display/window-interface.h>
 #include <cheryl/core/game-framework/tick-context.h>
 #include <cheryl/core/rendering/render-frame.h>
 #include <cheryl/core/resources/asset-management/asset-loader.h>
 #include <cheryl/text/font-service.h>
 
+#include <stdexcept>
+
 #include <space_invaders/game-objects/actors.h>
+#include <space_invaders/game-speed.h>
+
+namespace {
+    std::shared_ptr<const CE::Rendering::Resources::Material> make_enemy_material(CE::Rendering::Resources::Provider& provider) {
+        auto* builder = provider.shader_asset_builder();
+        if (!builder) throw std::logic_error("The enemy material requires a shader asset builder");
+
+        using CE::Assets::Shaders::Stage;
+        const CE::Assets::Shaders::ProgramRecipe program{
+            "space-invaders:enemies",
+            {
+                {Stage::Vertex, "enemies.vert", R"GLSL(#version 330 core
+uniform mat4 projectionMatrix;
+uniform mat4 viewMatrix;
+uniform mat4 modelMatrix;
+uniform float in_Scale;
+layout(location = 0) in vec3 in_Position;
+layout(location = 1) in vec2 in_Texcoord;
+out vec2 v_texcoord;
+void main() {
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(in_Position * in_Scale, 1.0);
+    v_texcoord = in_Texcoord;
+}
+)GLSL"},
+                {Stage::Fragment, "enemies.frag", R"GLSL(#version 330 core
+uniform sampler2D mytexture;
+uniform float in_Alpha;
+uniform vec3 in_Tint;
+in vec2 v_texcoord;
+out vec4 out_Color;
+void main() {
+    vec4 texel = texture(mytexture, v_texcoord);
+    out_Color = vec4(texel.rgb * in_Tint, texel.a * in_Alpha);
+}
+)GLSL"}
+            }
+        };
+        using CE::Rendering::Parameters::Semantic;
+        using CE::Rendering::Parameters::Type;
+        const CE::Assets::Shaders::MaterialRecipe recipe{
+            .id = "space-invaders:enemy-material",
+            .program = program.id,
+            .topology = CE::Rendering::Geometry::Topology::TriangleStrip,
+            .parameters = {
+                {"projection", Type::Mat4, true, Semantic::Projection},
+                {"view", Type::Mat4, true, Semantic::View},
+                {"model", Type::Mat4, true, Semantic::Model},
+                {"alpha", Type::Float, true, Semantic::Alpha},
+                {"scale", Type::Float, true, Semantic::Scale},
+                {"image", Type::Sampler2D},
+                {"tint", Type::Vec3}
+            },
+            .bindings = {{"opengl", R"JSON({"parameters":{
+                "projection":"projectionMatrix", "view":"viewMatrix", "model":"modelMatrix",
+                "alpha":"in_Alpha", "scale":"in_Scale", "image":"mytexture", "tint":"in_Tint"
+            }})JSON"}}
+        };
+        const auto executable = builder->build_program(program);
+        return builder->build_material(recipe, program, executable);
+    }
+}
 
 void SpaceInvaders::increase_score(const int delta) {
     score.set(score.get() + delta);
@@ -38,6 +103,7 @@ void SpaceInvaders::unregister_listeners() {
 void SpaceInvaders::init_platform() {
     CE::Assets::Loading::Loader loader(asset_root);
     loader.load_assets(engine_context.resources());
+    enemy_material = make_enemy_material(engine_context.resources());
 
     CE::Text::FontSelection font_selection;
     font_selection.automatic_system_fonts = true;
@@ -49,6 +115,7 @@ void SpaceInvaders::init_platform() {
     camera.set_framebuffer_size(engine_context.window().framebuffer_size());
 
     invasion.init_platform(engine_context);
+    invasion.set_material(enemy_material);
     bullets.init_platform(engine_context);
     ui.init_platform(engine_context);
     ui_controller.init_platform(engine_context);
@@ -58,6 +125,7 @@ void SpaceInvaders::init_platform() {
 
 void SpaceInvaders::init_simulation() {
     unregister_listeners();
+    game_speed = 1.0;
     is_game_over = false;
     const auto size = camera.framebuffer_size();
     player = std::make_unique<PlayerActor>(
@@ -72,7 +140,8 @@ void SpaceInvaders::init_simulation() {
         EnemyType::WOODIE,
         glm::vec2{size.width * 0.5f, size.height - 45.0f},
         static_cast<int>(Invasion::formation_size),
-        engine_context.events().publisher()
+        engine_context.events().publisher(),
+        enemy_material
     );
     ufo->init_simulation();
     bullets.init_simulation();

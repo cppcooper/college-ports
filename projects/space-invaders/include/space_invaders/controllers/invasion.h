@@ -7,6 +7,7 @@
 #include <random>
 
 #include <space_invaders/constants.h>
+#include <space_invaders/game-speed.h>
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/systems/invasion.h>
 
@@ -22,8 +23,8 @@ class InvasionController final : public AbstractGameObject {
 
     void onEdgeHit() {
         invasion.descend();
-        horizontal *= -1.11;
-        invasion.accelerate_animation(1.11);
+        horizontal = -horizontal;
+        game_speed *= 1.11;
     }
 
 public:
@@ -48,10 +49,10 @@ public:
             );
             if (respawn_pause_elapsed < SpaceInvadersConfig::player_respawn_delay_seconds) return;
         }
-        const auto [edge, remaining] = invasion.move(tick.delta_seconds, horizontal);
+        const auto [edge, remaining] = invasion.move(tick.delta_seconds, horizontal * game_speed);
         if (edge) {
             onEdgeHit();
-            static_cast<void>(invasion.move(remaining, horizontal));
+            static_cast<void>(invasion.move(remaining, horizontal * game_speed));
         }
 
         const auto now = std::chrono::steady_clock::now();

@@ -40,13 +40,20 @@ class Invasion final : public AbstractGameObject {
         Pool& operator=(const Pool&) = delete;
         ~Pool();
 
-        EnemyActor& construct(EnemyType type, glm::vec2 position, const CE::Events::EventBus::Publisher& publisher);
+        EnemyActor& construct(
+            EnemyType type, glm::vec2 position, const CE::Events::EventBus::Publisher& publisher,
+            const std::shared_ptr<const CE::Rendering::Resources::Material>& material
+        );
         // Factory: reserve once, then construct each column from its front row back.
-        static std::unique_ptr<Pool> create(const CE::Events::EventBus::Publisher& publisher, glm::vec2 world_size);
+        static std::unique_ptr<Pool> create(
+            const CE::Events::EventBus::Publisher& publisher, glm::vec2 world_size,
+            const std::shared_ptr<const CE::Rendering::Resources::Material>& material
+        );
         void refresh_front_line();
         [[nodiscard]] std::optional<Bounds> formation_bounds() const;
     };
     std::unique_ptr<Pool> pool;
+    std::shared_ptr<const CE::Rendering::Resources::Material> material;
     CE::Events::EventBus::Publisher event_publisher;
     glm::vec2 world_size;
 
@@ -63,7 +70,7 @@ public:
     // Returns {edge reached, remaining seconds}; horizontal is signed pixels/second.
     [[nodiscard]] std::tuple<bool, double> move(double delta_seconds, double horizontal) const;
     void descend() const;
-    void accelerate_animation(double factor) const;
+    void set_material(std::shared_ptr<const CE::Rendering::Resources::Material> value) { material = std::move(value); }
 
     void init_platform(CE::Runtime::Context& engine) override {
         const auto size = engine.window().framebuffer_size();
@@ -71,7 +78,10 @@ public:
         event_publisher = engine.events().publisher();
     }
     void init_simulation() override { spawn(); }
-    void deinit_platform() override { event_publisher = {}; }
+    void deinit_platform() override {
+        event_publisher = {};
+        material.reset();
+    }
     void deinit_simulation() override { pool.reset(); }
     void update(const CE::Game::TickContext& tick) override;
     void append_draws(CE::Rendering::PassWriter& pass) const;
@@ -84,6 +94,6 @@ public:
     }
     void spawn() {
         // Keep the current wave intact if allocation or a constructor fails.
-        pool = Pool::create(event_publisher, world_size);
+        pool = Pool::create(event_publisher, world_size, material);
     }
 };

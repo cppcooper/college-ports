@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <new>
 
+#include <space_invaders/game-speed.h>
 #include <space_invaders/game-objects/world-object.h>
 
 class Bullet final : public WorldObject {
@@ -38,7 +39,8 @@ public:
     }
 
     void update(const CE::Game::TickContext& tick) override {
-        translate({0.0f, static_cast<float>(speed * tick.delta_seconds)});
+        const double scaled_speed = speed * (1.0 + game_speed_fraction());
+        translate({0.0f, static_cast<float>(scaled_speed * tick.delta_seconds)});
     }
 
     [[nodiscard]] bool is_players() const {

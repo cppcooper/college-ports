@@ -7,15 +7,21 @@ Invasion::Pool::~Pool() {
     if (storage) Traits::deallocate(allocator, storage, formation_size);
 }
 
-EnemyActor& Invasion::Pool::construct(const EnemyType type, const glm::vec2 position, const CE::Events::EventBus::Publisher& publisher) {
+EnemyActor& Invasion::Pool::construct(
+    const EnemyType type, const glm::vec2 position, const CE::Events::EventBus::Publisher& publisher,
+    const std::shared_ptr<const CE::Rendering::Resources::Material>& material
+) {
     auto* storage = enemies.data();
     auto* enemy = storage + enemies.size();
-    Traits::construct(allocator, enemy, type, position, static_cast<int>(enemies.size()), publisher);
+    Traits::construct(allocator, enemy, type, position, static_cast<int>(enemies.size()), publisher, material);
     enemies = {storage, enemies.size() + 1};
     return *enemy;
 }
 
-std::unique_ptr<Invasion::Pool> Invasion::Pool::create(const CE::Events::EventBus::Publisher& publisher, const glm::vec2 world_size) {
+std::unique_ptr<Invasion::Pool> Invasion::Pool::create(
+    const CE::Events::EventBus::Publisher& publisher, const glm::vec2 world_size,
+    const std::shared_ptr<const CE::Rendering::Resources::Material>& material
+) {
     auto result = std::make_unique<Pool>();
     result->front_line.reserve(columns);
     result->enemies = {Traits::allocate(result->allocator, formation_size), 0};
@@ -48,7 +54,7 @@ std::unique_ptr<Invasion::Pool> Invasion::Pool::create(const CE::Events::EventBu
             auto& enemy = result->construct(
                 types[row],
                 glm::vec2{first_x + column * column_spacing, first_y + row * row_spacing},
-                publisher
+                publisher, material
             );
             if (row == 0) {
                 result->front_line.push_back(&enemy);
@@ -125,12 +131,6 @@ void Invasion::descend() const {
     if (shape && shape->minimum.y <= PlayerActor::spawn_height) {
         event_publisher.notify(SpaceInvadersEvents::game_over_event, SpaceInvadersEvents::GameOver{});
     }
-}
-
-void Invasion::accelerate_animation(const double factor) const {
-    if (!pool) return;
-    for (std::size_t i = 0; i < formation_size; ++i)
-        pool->enemies[i].animation_speed *= factor;
 }
 
 void Invasion::update(const CE::Game::TickContext& tick) {

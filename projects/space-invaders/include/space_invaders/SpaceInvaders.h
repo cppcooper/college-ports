@@ -24,6 +24,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
 
     std::unique_ptr<PlayerActor> player;
     std::unique_ptr<EnemyActor> ufo;
+    std::shared_ptr<const CE::Rendering::Resources::Material> enemy_material;
     CE::Rendering::Camera2D camera;
     BulletManager bullets;
     Invasion invasion;
@@ -87,6 +88,7 @@ public:
         ui.deinit_platform();
         bullets.deinit_platform();
         invasion.deinit_platform();
+        enemy_material.reset();
     }
     void deinit_simulation() override {
         unregister_listeners();
