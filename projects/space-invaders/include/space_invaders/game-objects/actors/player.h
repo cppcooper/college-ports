@@ -8,11 +8,12 @@
 #include <algorithm>
 #include <utility>
 
+#include <space_invaders/constants.h>
 #include <space_invaders/game-objects/actors/actor-base.h>
 
 class PlayerActor final : public ActorBase {
     float screen_width;
-    static constexpr double death_frame_duration_seconds = 1.0;
+    static constexpr double death_frame_duration_seconds = SpaceInvadersConfig::player_respawn_delay_seconds;
     double death_frame_elapsed = death_frame_duration_seconds;
 
 public:
@@ -31,14 +32,28 @@ public:
             : std::clamp(0.0f, -shape.minimum.x, screen_width - shape.maximum.x);
     }
     void hit() override {
-        if (is_shot) return;
+        if (is_shot || is_dead) return;
         death_frame_elapsed = 0.0;
         is_shot = true;
-        // Reserve lives and respawning remain game-level work.
+        event_publisher.notify(
+            SpaceInvadersEvents::player_hit_event,
+            SpaceInvadersEvents::PlayerHit{}
+        );
+    }
+    void respawn() {
+        is_shot = false;
+        is_dead = false;
+        death_frame_elapsed = death_frame_duration_seconds;
     }
     void update(const CE::Game::TickContext& tick) override {
-        if (!is_shot) return;
+        ActorBase::update(tick);
+        if (!is_shot || death_frame_elapsed >= death_frame_duration_seconds) return;
         death_frame_elapsed = std::clamp(death_frame_elapsed + tick.delta_seconds, 0.0, death_frame_duration_seconds);
-        if (death_frame_elapsed >= death_frame_duration_seconds) is_shot = false;
+        if (death_frame_elapsed >= death_frame_duration_seconds) {
+            event_publisher.notify(
+                SpaceInvadersEvents::player_death_animation_finished_event,
+                SpaceInvadersEvents::PlayerDeathAnimationFinished{}
+            );
+        }
     }
 };

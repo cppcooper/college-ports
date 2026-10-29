@@ -40,5 +40,8 @@ struct ActorBase : WorldObject {
         );
     }
     virtual void hit() = 0;
+    void update(const CE::Game::TickContext&) override {
+        if (is_shot) is_dead = true;
+    }
     [[nodiscard]] bool is_alive() const noexcept { return !is_dead; }
 };

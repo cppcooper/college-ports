@@ -40,17 +40,17 @@ public:
         return {sprite, animation.cell()};
     }
     void hit() override {
-        if (!is_alive()) return;
+        if (is_shot || is_dead) return;
         explosion_position = position;
         explosion_elapsed = 0.0;
         is_shot = true;
-        is_dead = true;
         event_publisher.notify(
             SpaceInvadersEvents::enemy_killed_event,
             SpaceInvadersEvents::EnemyKilled{ static_cast<int>(animation_speed * points_for(type))}
         );
     }
     void update(const CE::Game::TickContext& tick) override {
+        ActorBase::update(tick);
         if (is_alive()) {
             animation.advance(std::chrono::duration<double>{animation_speed * tick.delta_seconds});
         } else {
@@ -65,5 +65,3 @@ public:
         }
     }
 };
-
-

@@ -18,6 +18,7 @@ void BulletManager::init_simulation() {
 }
 
 void BulletManager::update(const CE::Game::TickContext& tick) {
+    if (clear_requested) clear_bullets();
     for (const auto& bullet : bullets) {
         bullet->update(tick);
     }
@@ -29,7 +30,12 @@ void BulletManager::update(const CE::Game::TickContext& tick) {
 }
 
 void BulletManager::detect_collisions(PlayerActor* p, Invasion* i) {
-    const auto removed = std::erase_if(bullets, [p, i](const auto& bullet) {
+    if (clear_requested) {
+        clear_bullets();
+        return;
+    }
+    const auto removed = std::erase_if(bullets, [this, p, i](const auto& bullet) {
+        if (clear_requested) return true;
         const auto shape = bullet->bounds();
         if (bullet->is_players()) {
             if (!i) return false;
@@ -45,7 +51,11 @@ void BulletManager::detect_collisions(PlayerActor* p, Invasion* i) {
         }
         return false;
     });
-    if (removed) report_count();
+    if (clear_requested) {
+        clear_bullets();
+    } else if (removed) {
+        report_count();
+    }
 }
 
 void BulletManager::append_draws(CE::Rendering::PassWriter& pass) const {

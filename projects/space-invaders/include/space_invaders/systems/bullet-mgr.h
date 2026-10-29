@@ -29,9 +29,15 @@ class BulletManager final : public AbstractGameObject {
     CE::Events::EventBus* events = nullptr;
     std::function<void(int)> count_changed;
     glm::vec2 world_size{1, 1};
+    bool clear_requested = false;
 
     void report_count() const {
         if (count_changed) count_changed(static_cast<int>(bullets.size()));
+    }
+    void clear_bullets() {
+        bullets.clear();
+        clear_requested = false;
+        report_count();
     }
 protected:
     void unregister_listener() const {
@@ -47,6 +53,8 @@ public:
     ~BulletManager() override { unregister_listener(); }
 
     [[nodiscard]] std::size_t count() const noexcept { return bullets.size(); }
+    // PlayerHit can fire during collision iteration; clear after that pass finishes.
+    void onPlayerHit() { clear_requested = true; }
     void init_platform(CE::Runtime::Context& engine) override {
         events = &engine.events();
         const auto size = engine.window().framebuffer_size();
@@ -60,8 +68,7 @@ public:
     void deinit_simulation() override {
         unregister_listener();
         shot_listener = {};
-        bullets.clear();
-        report_count();
+        clear_bullets();
     }
     void deinit_platform() override {
         unregister_listener();

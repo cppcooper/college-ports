@@ -18,6 +18,13 @@ void GameUI::init_simulation() {
             engine, 2, CE::UI::TGUI::SessionOptions{.automatic_view = true}
         );
         hud = std::make_unique<HUD>(*session);
+        game_over_label = tgui::Label::create("Game Over");
+        game_over_label->setTextSize(48);
+        game_over_label->setAutoSize(true);
+        game_over_label->setIgnoreMouseEvents(true);
+        game_over_label->setVisible(false);
+        session->gui().add(game_over_label);
+        session->set_layout(game_over_label, {.anchor = {0.5f, 0.5f}});
     }
 }
 
@@ -31,6 +38,10 @@ void GameUI::set_score(const int value) {
 
 void GameUI::set_lives(const int value) {
     if (hud) hud->set_lives(value);
+}
+
+void GameUI::set_game_over(const bool value) {
+    if (game_over_label) game_over_label->setVisible(value);
 }
 
 void GameUI::update(const CE::Game::TickContext& tick) {
@@ -52,6 +63,7 @@ void GameUI::deinit_simulation() {
 void GameUI::deinit_platform() {
     pending = {};
     scene = {};
+    game_over_label.reset();
     hud.reset();
     if (session) session->close_after_quiescence();
     session.reset();

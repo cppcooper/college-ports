@@ -39,6 +39,12 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
         3, {[this](const int& value) { ui.set_lives(value); }}
     };
     CE::Events::EventBus::Registration enemy_killed_listener;
+    CE::Events::EventBus::Registration player_hit_listener;
+    CE::Events::EventBus::Registration player_death_animation_finished_listener;
+    CE::Events::EventBus::Registration game_over_listener;
+    bool is_game_over = false;
+
+    void unregister_listeners();
 
 protected:
     void load_score();
@@ -52,22 +58,27 @@ public:
     : engine_context(engine), asset_root(std::move(asset_root)),
       bullets(player_controller, [this](const int count) { invasion_controller.onBulletCountChanged(count); }),
       ui(engine), ui_controller(ui), invasion_controller(invasion) {}
-    ~SpaceInvaders() override { enemy_killed_listener.disconnect(); }
+    ~SpaceInvaders() override { unregister_listeners(); }
 
     void init_platform() override;
     void init_simulation() override;
     void prepare_render_frame(CE::Rendering::FrameWriter& frame) const override;
     void update(const CE::Game::TickContext& tick) override {
         ui_controller.update(tick);
-        player_controller.update(tick);
-        invasion_controller.update(tick);
-        if (player) player->update(tick);
-        invasion.update(tick);
-        bullets.update(tick);
-        bullets.detect_collisions(player.get(), &invasion);
+        if (!is_game_over && player) player->update(tick);
+        if (!is_game_over) invasion.update(tick);
+        if (!is_game_over) {
+            player_controller.update(tick);
+            invasion_controller.update(tick);
+        }
+        if (!is_game_over) {
+            bullets.update(tick);
+            bullets.detect_collisions(player.get(), &invasion);
+        }
         ui.update(tick);
     }
     void deinit_platform() override {
+        unregister_listeners();
         invasion_controller.deinit_platform();
         player_controller.deinit_platform();
         ui_controller.deinit_platform();
@@ -76,8 +87,7 @@ public:
         invasion.deinit_platform();
     }
     void deinit_simulation() override {
-        enemy_killed_listener.disconnect();
-        enemy_killed_listener = {};
+        unregister_listeners();
         ui_controller.deinit_simulation();
         player_controller.deinit_simulation();
         invasion_controller.deinit_simulation();

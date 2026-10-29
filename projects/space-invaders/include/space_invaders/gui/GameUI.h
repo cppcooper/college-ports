@@ -11,6 +11,8 @@
 #include <memory>
 #include <optional>
 
+#include <TGUI/Widgets/Label.hpp>
+
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/interfaces/frame-renderable.h>
 #include <space_invaders/gui/HUD.h>
@@ -21,6 +23,7 @@ class GameUI final : public AbstractGameObject, public FrameRenderable {
     std::optional<CE::UI::TGUI::SceneUploader> uploader;
     std::unique_ptr<CE::UI::TGUI::Session> session;
     std::unique_ptr<HUD> hud;
+    tgui::Label::Ptr game_over_label;
     std::future<CE::UI::TGUI::Scene> pending;
     CE::UI::TGUI::Scene scene;
 
@@ -38,6 +41,7 @@ public:
     void process_input(const CE::Game::TickContext& tick) const;
     void set_score(int value);
     void set_lives(int value);
+    void set_game_over(bool value);
     void update(const CE::Game::TickContext& tick) override;
     void append_passes(CE::Rendering::FrameWriter& frame) const override;
 };
