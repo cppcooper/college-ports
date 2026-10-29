@@ -8,6 +8,7 @@
 #include <format>
 #include <stdexcept>
 
+#include <TGUI/Color.hpp>
 #include <TGUI/String.hpp>
 #include <TGUI/Texture.hpp>
 #include <TGUI/Vector2.hpp>
@@ -39,6 +40,7 @@ private:
     void create_widgets() {
         score = tgui::Label::create("Score: 0");
         score->setTextSize(24);
+        score->getRenderer()->setTextColor(tgui::Color::White);
         score->setAutoSize(true);
         score->setIgnoreMouseEvents(true);
         session.gui().add(score);

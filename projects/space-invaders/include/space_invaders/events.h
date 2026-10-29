@@ -3,7 +3,19 @@
 #include <cheryl/core/subsystems/event-channel.h>
 #include <glm/vec2.hpp>
 
+#include <string>
+
 namespace SpaceInvadersEvents {
+    struct PauseToggle {};
+    inline const CE::Events::EventChannel<PauseToggle> pause_toggle_event{"space-invaders.pause-toggle"};
+
+    enum class MenuAction { HighScores, Back, Quit, SubmitScore, SkipScore };
+    struct MenuActionRequested {
+        MenuAction action;
+        std::string name;
+    };
+    inline const CE::Events::EventChannel<MenuActionRequested> menu_action_event{"space-invaders.menu-action"};
+
     struct GameOver {};
 
     inline const CE::Events::EventChannel<GameOver> game_over_event{

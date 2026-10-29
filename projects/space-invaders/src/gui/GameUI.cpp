@@ -2,11 +2,13 @@
 
 #include <stdexcept>
 
-GameUI::GameUI(CE::Runtime::Context& engine) : engine(engine) {}
+GameUI::GameUI(CE::Runtime::Context& engine, const std::filesystem::path& asset_root)
+: engine(engine), menu(engine, asset_root) {}
 
 void GameUI::init_platform(CE::Runtime::Context&) {
     platform.emplace(engine.platform_dispatcher().submission());
     uploader.emplace(engine.resources());
+    menu.init_platform(engine);
 }
 
 void GameUI::init_simulation() {
@@ -26,10 +28,12 @@ void GameUI::init_simulation() {
         session->gui().add(game_over_label);
         session->set_layout(game_over_label, {.anchor = {0.5f, 0.5f}});
     }
+    menu.init_simulation();
 }
 
-void GameUI::process_input(const CE::Game::TickContext& tick) const {
+bool GameUI::process_input(const CE::Game::TickContext& tick) {
     if (session) session->handle_input(tick.input.records(), false);
+    return menu.process_input(tick);
 }
 
 void GameUI::set_score(const int value) {
@@ -52,15 +56,20 @@ void GameUI::update(const CE::Game::TickContext& tick) {
     if (!pending.valid()) {
         pending = uploader->submit(*platform, session->record());
     }
+    menu.update(tick);
 }
 
-void GameUI::append_passes(CE::Rendering::FrameWriter& frame) const { scene.write(frame); }
+void GameUI::append_passes(CE::Rendering::FrameWriter& frame) const {
+    scene.write(frame);
+    menu.append_passes(frame);
+}
 
 void GameUI::deinit_simulation() {
     // Retain session/upload dependencies until accepted platform work settles.
 }
 
 void GameUI::deinit_platform() {
+    menu.deinit_platform();
     pending = {};
     scene = {};
     game_over_label.reset();

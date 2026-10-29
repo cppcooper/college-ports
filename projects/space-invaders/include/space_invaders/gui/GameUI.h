@@ -16,9 +16,11 @@
 #include <space_invaders/game-objects/abstract-game-object.h>
 #include <space_invaders/interfaces/frame-renderable.h>
 #include <space_invaders/gui/HUD.h>
+#include <space_invaders/gui/game-menu.h>
 
 class GameUI final : public AbstractGameObject, public FrameRenderable {
     CE::Runtime::Context& engine;
+    GameMenu menu;
     std::optional<CE::Runtime::PlatformDispatcher::Submission> platform;
     std::optional<CE::UI::TGUI::SceneUploader> uploader;
     std::unique_ptr<CE::UI::TGUI::Session> session;
@@ -28,7 +30,7 @@ class GameUI final : public AbstractGameObject, public FrameRenderable {
     CE::UI::TGUI::Scene scene;
 
 public:
-    explicit GameUI(CE::Runtime::Context& engine);
+    GameUI(CE::Runtime::Context& engine, const std::filesystem::path& asset_root);
     ~GameUI() override = default;
     GameUI(const GameUI&) = delete;
     GameUI& operator=(const GameUI&) = delete;
@@ -38,7 +40,8 @@ public:
     void deinit_simulation() override;
     void deinit_platform() override;
 
-    void process_input(const CE::Game::TickContext& tick) const;
+    bool process_input(const CE::Game::TickContext& tick);
+    [[nodiscard]] GameMenu& game_menu() { return menu; }
     void set_score(int value);
     void set_lives(int value);
     void set_game_over(bool value);

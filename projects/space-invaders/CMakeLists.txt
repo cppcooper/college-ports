@@ -9,7 +9,16 @@ target_include_directories(space_invaders PRIVATE include)
 
 target_link_libraries(space_invaders PRIVATE
     Cheryl::OpenGL::Startup
-    Cheryl::UI::TGUI)
+    Cheryl::UI::TGUI
+    Cheryl::UI::RmlUi)
+
+# Seed once; reconfiguration must preserve scores saved during play.
+set(space_invaders_score_file "${CMAKE_CURRENT_BINARY_DIR}/data/highscore.txt")
+if(NOT EXISTS "${space_invaders_score_file}")
+    configure_file(assets/highscore.txt "${space_invaders_score_file}" COPYONLY)
+endif()
+target_compile_definitions(space_invaders PRIVATE
+    SPACE_INVADERS_SCORE_FILE="${space_invaders_score_file}")
 
 set_target_properties(space_invaders PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

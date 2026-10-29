@@ -87,6 +87,69 @@ void SpaceInvaders::game_over() {
     if (is_game_over) return;
     is_game_over = true;
     ui.set_game_over(true);
+    finish_run(false);
+}
+
+void SpaceInvaders::toggle_pause() {
+    // Text entry must be saved or explicitly skipped before it can be dismissed.
+    if (ui.game_menu().page() == GameMenu::Page::ScoreEntry)
+        return;
+    paused = !paused;
+    if (paused) ui.game_menu().show_pause();
+    else ui.game_menu().hide();
+}
+
+void SpaceInvaders::finish_run(const bool quitting) {
+    quit_after_score = quitting;
+    paused = true;
+    if (!score_resolved && high_scores.qualifies(score.get()))
+        ui.game_menu().show_score_entry(score.get(), quitting);
+    else if (quitting)
+        quit_requested = true;
+    else
+        ui.game_menu().show_scores(high_scores.entries());
+}
+
+void SpaceInvaders::handle_menu_action(const SpaceInvadersEvents::MenuActionRequested& request) {
+    using SpaceInvadersEvents::MenuAction;
+    auto& menu = ui.game_menu();
+    switch (request.action) {
+    case MenuAction::HighScores:
+        if (menu.page() != GameMenu::Page::ScoreEntry) {
+            paused = true;
+            menu.show_scores(high_scores.entries());
+        }
+        break;
+    case MenuAction::Back:
+        if (menu.page() != GameMenu::Page::ScoreEntry) {
+            paused = true;
+            menu.show_pause();
+        }
+        break;
+    case MenuAction::Quit:
+        finish_run(true);
+        break;
+    case MenuAction::SubmitScore:
+        if (menu.page() != GameMenu::Page::ScoreEntry || score_resolved)
+            break;
+        try {
+            if (!high_scores.add(score.get(), request.name))
+                throw std::runtime_error("This score no longer qualifies for the top 10.");
+            score_resolved = true;
+            if (quit_after_score) quit_requested = true;
+            else menu.show_scores(high_scores.entries());
+        } catch (const std::exception& error) {
+            menu.show_error(error.what());
+        }
+        break;
+    case MenuAction::SkipScore:
+        if (menu.page() != GameMenu::Page::ScoreEntry)
+            break;
+        score_resolved = true;
+        if (quit_after_score) quit_requested = true;
+        else menu.show_scores(high_scores.entries());
+        break;
+    }
 }
 
 void SpaceInvaders::unregister_listeners() {
@@ -98,6 +161,10 @@ void SpaceInvaders::unregister_listeners() {
     player_death_animation_finished_listener = {};
     game_over_listener.disconnect();
     game_over_listener = {};
+    pause_toggle_listener.disconnect();
+    pause_toggle_listener = {};
+    menu_action_listener.disconnect();
+    menu_action_listener = {};
 }
 
 void SpaceInvaders::spawn_ufo() {
@@ -146,6 +213,8 @@ void SpaceInvaders::init_simulation() {
     unregister_listeners();
     game_speed = 1.0;
     is_game_over = false;
+    paused = score_resolved = quit_after_score = quit_requested = false;
+    high_scores.load();
     const auto size = camera.framebuffer_size();
     player = std::make_unique<PlayerActor>(
         engine_context.events().publisher(),
@@ -201,6 +270,14 @@ void SpaceInvaders::init_simulation() {
         [this](const SpaceInvadersEvents::GameOver&) {
             game_over();
         }
+    );
+    pause_toggle_listener = engine_context.events().register_listener(
+        SpaceInvadersEvents::pause_toggle_event,
+        [this](const SpaceInvadersEvents::PauseToggle&) { toggle_pause(); }
+    );
+    menu_action_listener = engine_context.events().register_listener(
+        SpaceInvadersEvents::menu_action_event,
+        [this](const SpaceInvadersEvents::MenuActionRequested& request) { handle_menu_action(request); }
     );
 }
 
