@@ -100,18 +100,17 @@ public:
             ui.update(tick);
             return;
         }
-        if (!is_game_over && player) player->update(tick);
-        if (!is_game_over) invasion.update(tick);
-        if (!is_game_over && ufo) {
-            ufo->update(tick);
-            if (!ufo->is_alive() && !ufo->is_exploding()) spawn_ufo();
-        }
-        if (!is_game_over) {
+        if (!is_game_over) [[likely]] {
+            if (player) player->update(tick);
+            invasion.update(tick);
+            if (ufo) {
+                ufo->update(tick);
+                if (!ufo->is_alive() && !ufo->is_exploding()) spawn_ufo();
+            }
+
             player_controller.update(tick);
             invasion_controller.update(tick);
             if (player && player->is_alive()) ufo_controller.update(tick);
-        }
-        if (!is_game_over) {
             bullets.update(tick);
             bullets.detect_collisions(player.get(), &invasion, ufo.get());
         }
