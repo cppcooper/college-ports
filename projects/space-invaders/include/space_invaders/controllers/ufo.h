@@ -25,7 +25,18 @@ public:
     void init_platform(CE::Runtime::Context& engine) override {
         screen_width = static_cast<float>(engine.window().framebuffer_size().width);
     }
-    void init_simulation() override { target_x.reset(); }
+    void init_simulation() override {
+        target_x.reset();
+        if (!actor) return;
+        constexpr float maximum_spawn_distance = 20'000.0f;
+        const auto shape = actor->bounds();
+        const bool spawn_left = std::bernoulli_distribution{0.5}(random);
+        const float minimum_distance = (spawn_left
+            ? shape.maximum.x - actor->position.x
+            : actor->position.x - shape.minimum.x) + 1.0f;
+        const float distance = std::uniform_real_distribution<float>{minimum_distance, maximum_spawn_distance}(random);
+        actor->position.x = spawn_left ? -distance : screen_width + distance;
+    }
     void deinit_simulation() override {
         detach();
         target_x.reset();

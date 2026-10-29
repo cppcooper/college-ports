@@ -26,7 +26,7 @@ public:
 };
 
 struct ActorActions {
-    static constexpr double fire_cd = 0.2;
+    static constexpr double fire_cd = 0.444;
     static constexpr CE::Input::Actions::Id move{1};
     static constexpr CE::Input::Actions::Id left{2};
     static constexpr CE::Input::Actions::Id right{3};

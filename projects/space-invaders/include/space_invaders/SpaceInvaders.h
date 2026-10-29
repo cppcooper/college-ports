@@ -49,6 +49,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
     bool is_game_over = false;
 
     void unregister_listeners();
+    void spawn_ufo();
 
 protected:
     void load_score();
@@ -71,7 +72,10 @@ public:
         ui_controller.update(tick);
         if (!is_game_over && player) player->update(tick);
         if (!is_game_over) invasion.update(tick);
-        if (!is_game_over && ufo) ufo->update(tick);
+        if (!is_game_over && ufo) {
+            ufo->update(tick);
+            if (!ufo->is_alive() && !ufo->is_exploding()) spawn_ufo();
+        }
         if (!is_game_over) {
             player_controller.update(tick);
             invasion_controller.update(tick);

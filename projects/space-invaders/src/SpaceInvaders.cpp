@@ -100,6 +100,24 @@ void SpaceInvaders::unregister_listeners() {
     game_over_listener = {};
 }
 
+void SpaceInvaders::spawn_ufo() {
+    if (ufo) {
+        ufo_controller.deinit_simulation();
+        ufo->deinit_simulation();
+    }
+    const auto size = camera.framebuffer_size();
+    ufo = std::make_unique<EnemyActor>(
+        EnemyType::WOODIE,
+        glm::vec2{0.0f, size.height - SpaceInvadersConfig::ufo_spawn_top_offset},
+        static_cast<int>(Invasion::formation_size),
+        engine_context.events().publisher(),
+        enemy_material
+    );
+    ufo->init_simulation();
+    ufo_controller.attach(*ufo);
+    ufo_controller.init_simulation();
+}
+
 void SpaceInvaders::init_platform() {
     CE::Assets::Loading::Loader loader(asset_root);
     loader.load_assets(engine_context.resources());
@@ -137,14 +155,7 @@ void SpaceInvaders::init_simulation() {
 
     player->init_simulation();
     invasion.init_simulation();
-    ufo = std::make_unique<EnemyActor>(
-        EnemyType::WOODIE,
-        glm::vec2{size.width * 0.5f, size.height - SpaceInvadersConfig::ufo_spawn_top_offset},
-        static_cast<int>(Invasion::formation_size),
-        engine_context.events().publisher(),
-        enemy_material
-    );
-    ufo->init_simulation();
+    spawn_ufo();
     bullets.init_simulation();
     ui.init_simulation();
     ui.set_score(score.get());
@@ -152,11 +163,9 @@ void SpaceInvaders::init_simulation() {
     ui.set_game_over(false);
 
     player_controller.attach(*player);
-    ufo_controller.attach(*ufo);
 
     ui_controller.init_simulation();
     player_controller.init_simulation();
-    ufo_controller.init_simulation();
     invasion_controller.init_simulation();
 
     enemy_killed_listener = engine_context.events().register_listener(
