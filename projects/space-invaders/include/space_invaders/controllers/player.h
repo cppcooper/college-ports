@@ -16,6 +16,7 @@
 class ActorController : public AbstractGameObject {
 protected:
     ActorBase* actor = nullptr;
+    double horizontal = 0.0;
 
 public:
     ~ActorController() override = default;
@@ -37,6 +38,9 @@ class PlayerController final : public ActorController {
     double time_since_shot = 1;
 
 public:
+    PlayerController() {
+        horizontal = 160.0;
+    }
     [[nodiscard]] static CE::Input::Actions::ContextDefinition defined_controls(const CE::Input::System& system) {
         using namespace CE::Input;
         const auto keyboard = system.keyboard_id();

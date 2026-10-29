@@ -1,4 +1,5 @@
 #include <space_invaders/systems/invasion.h>
+#include <space_invaders/constants.h>
 
 Invasion::Pool::~Pool() {
     auto* storage = enemies.data();
@@ -44,10 +45,13 @@ std::unique_ptr<Invasion::Pool> Invasion::Pool::create(
         largest.x + 12.0f, std::max(0.0f, world_size.x - largest.x - 48.0f) / (columns - 1)
     );
     const float row_spacing = std::min(
-        largest.y + 8.0f, std::max(0.0f, world_size.y - PlayerActor::spawn_height - 150.0f) / (rows - 1)
+        largest.y + 8.0f,
+        std::max(
+            0.0f, world_size.y - PlayerActor::spawn_height - SpaceInvadersConfig::formation_spawn_top_offset - 50.0f
+        ) / (rows - 1)
     );
     const float first_x = (world_size.x - column_spacing * (columns - 1)) * 0.5f;
-    const float first_y = world_size.y - 100.0f - row_spacing * (rows - 1);
+    const float first_y = world_size.y - SpaceInvadersConfig::formation_spawn_top_offset - row_spacing * (rows - 1);
 
     for (std::size_t column = 0; column < columns; ++column) {
         for (std::size_t row = 0; row < rows; ++row) {

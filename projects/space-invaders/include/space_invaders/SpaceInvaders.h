@@ -13,6 +13,7 @@
 #include <space_invaders/controllers/invasion.h>
 #include <space_invaders/controllers/player.h>
 #include <space_invaders/controllers/ui.h>
+#include <space_invaders/controllers/ufo.h>
 #include <space_invaders/events.h>
 #include <space_invaders/gui/GameUI.h>
 #include <space_invaders/systems/bullet-mgr.h>
@@ -32,6 +33,7 @@ class SpaceInvaders final : public CE::Game::AbstractGame {
 
     UIController ui_controller;
     PlayerController player_controller;
+    UFOController ufo_controller;
     InvasionController invasion_controller;
 
     CE::State::ObservedVariable<int> score{
@@ -73,6 +75,7 @@ public:
         if (!is_game_over) {
             player_controller.update(tick);
             invasion_controller.update(tick);
+            if (player && player->is_alive()) ufo_controller.update(tick);
         }
         if (!is_game_over) {
             bullets.update(tick);
@@ -83,6 +86,7 @@ public:
     void deinit_platform() override {
         unregister_listeners();
         invasion_controller.deinit_platform();
+        ufo_controller.deinit_platform();
         player_controller.deinit_platform();
         ui_controller.deinit_platform();
         ui.deinit_platform();
@@ -94,6 +98,7 @@ public:
         unregister_listeners();
         ui_controller.deinit_simulation();
         player_controller.deinit_simulation();
+        ufo_controller.deinit_simulation();
         invasion_controller.deinit_simulation();
         bullets.deinit_simulation();
         invasion.deinit_simulation();
