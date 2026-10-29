@@ -63,7 +63,7 @@ void GameMenu::init_simulation() {
     document = session->context().LoadDocument(Rml::String(source.begin(), source.end()));
     if (!document)
         throw std::runtime_error("Cannot load the game menu: " + document_file.string());
-    for (const auto* id : {"pause-page", "scores-page", "entry-page", "resume", "high-scores", "quit", "back", "score-list", "entry-score", "entry-help", "menu-error"})
+    for (const auto* id : {"pause-page", "scores-page", "entry-page", "resume", "new-game", "high-scores", "quit", "back", "score-list", "entry-score", "entry-help", "menu-error"})
         static_cast<void>(element(*document, id));
     static_cast<void>(name_field(*document));
     listener = std::make_unique<Listener>([this](Rml::Event& event) { process_event(event); });
@@ -108,6 +108,10 @@ void GameMenu::finish_run(const bool quitting) {
 void GameMenu::handle_menu_action(const SpaceInvadersEvents::MenuActionRequested& request) {
     using namespace SpaceInvadersEvents;
     switch (request.action) {
+    case MenuAction::NewGame:
+        if (current_page != Page::ScoreEntry)
+            events.notify(new_game_requested_event, NewGameRequested{});
+        break;
     case MenuAction::HighScores:
         if (current_page != Page::ScoreEntry) {
             events.notify(pause_requested_event, PauseRequested{true});
@@ -236,6 +240,7 @@ void GameMenu::process_event(Rml::Event& event) {
         if (action.empty())
             continue;
         if (action == "resume") requests.push_back({true, {}});
+        else if (action == "new-game") requests.push_back({false, {MenuAction::NewGame, {}}});
         else if (action == "high-scores") requests.push_back({false, {MenuAction::HighScores, {}}});
         else if (action == "back") requests.push_back({false, {MenuAction::Back, {}}});
         else if (action == "quit") requests.push_back({false, {MenuAction::Quit, {}}});

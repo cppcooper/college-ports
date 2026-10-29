@@ -15,7 +15,10 @@ namespace SpaceInvadersEvents {
     struct QuitRequested {};
     inline const CE::Events::EventChannel<QuitRequested> quit_requested_event{"space-invaders.quit-requested"};
 
-    enum class MenuAction { HighScores, Back, Quit, SubmitScore, SkipScore };
+    struct NewGameRequested {};
+    inline const CE::Events::EventChannel<NewGameRequested> new_game_requested_event{"space-invaders.new-game-requested"};
+
+    enum class MenuAction { NewGame, HighScores, Back, Quit, SubmitScore, SkipScore };
     struct MenuActionRequested {
         MenuAction action;
         std::string name;
