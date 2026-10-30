@@ -1,53 +1,42 @@
-#ifndef ROVER_H
-#define ROVER_H
+#pragma once
 
-#include <rover/graphics/2d/sprite.h>
-#include <rover/levels/tile_map.h>
-#include <rover/levels/viewport.h>
-#include <atomic>
-#include <mutex>
-#include <stack>
-#include <deque>
+#include <rover/levels/tile-map.h>
 
+#include <array>
+#include <cstddef>
 
-#define EXAMPLE1
+namespace RoverModel {
+    enum class Direction { Down, Right, Up, Left };
+    enum class SearchStatus { Idle, Searching, Found, Unreachable };
+    class Rover {
+        struct Frame {
+            Position position;
+            std::array<Direction, 4> order;
+            std::size_t next = 0;
+        };
+        TileMap& map;
+        std::vector<Frame> stack;
+        std::vector<Position> path_;
+        Position position_{};
+        Position goal_{};
+        Direction facing_ = Direction::Down;
+        SearchStatus status_ = SearchStatus::Idle;
+        std::size_t moves_ = 0;
+        std::array<Direction, 4> search_order(Position position) const;
+        void visit(Position position);
+        void step();
 
-using ushort = unsigned short;
-
-class Rover
-{
-private:
-	Tile_Map* environment = nullptr;
-	View_Port* view_port = nullptr;
-
-	sprite* rover_sprite = nullptr;
-	ushort sprite_frame = 0;
-	std::mutex rover_lock;
-
-	volatile unsigned int Recursion_Level = 0;
-	volatile unsigned int Total_Moves = 0;
-	bool stuck = false;
-	ushort dest_x;
-	ushort dest_y;
-
-	std::mutex* Position_Lock;
-	ushort current_x;
-	ushort current_y;
-	std::deque<std::pair<ushort, ushort>> path;
-	std::stack<std::pair<ushort, ushort>> path_segment;
-
-protected:
-	bool Move( ushort start_x, ushort start_y );
-	inline bool Move_Forward();
-	__int8* Get_Search_Order();
-	void Face_Dir( __int8 direction );
-
-public:
-	Rover( Tile_Map* map, View_Port* view_port );
-	~Rover();
-	void FindPath( ushort start_x, ushort start_y, ushort dest_x, ushort dest_y );
-	void Update_ViewPort();
-	void Draw();
-};
-
-#endif
+    public:
+        explicit Rover(TileMap& map) : map(map) {}
+        void start(Position start, Position goal);
+        void cancel();
+        void advance(std::size_t budget);
+        Position position() const { return position_; }
+        Position goal() const { return goal_; }
+        Direction facing() const { return facing_; }
+        SearchStatus status() const { return status_; }
+        std::size_t total_moves() const { return moves_; }
+        std::size_t recursion_level() const { return stack.size(); }
+        const std::vector<Position>& path() const { return path_; }
+    };
+}
