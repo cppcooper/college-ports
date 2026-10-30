@@ -195,6 +195,41 @@ int main() {
     for (int i = 0; i < 8; ++i) check(corner.move(Direction::Right), "Cannot reach test corner");
     check(corner.visible_tiles(20,20).contains({9,9}), "New corridor stayed hidden after reaching the corner");
 
+    // Remember terrain seen beyond the automatic adjacent-room reveal, even
+    // after taking a different branch. Remembering it must not extend sight.
+    Graph branches = bent;
+    branches.nodes.resize(6);
+    connect(branches, 0, 3, Direction::Down);
+    connect(branches, 1, 4, Direction::Right);
+    connect(branches, 4, 5, Direction::Right);
+    HyperMaze remembered(branches);
+    const auto first_sight = remembered.visible_tiles(40, 40);
+    check(first_sight.contains({25,1}) && remembered.tile({25,1}) == Tile::Blank,
+        "Exploration fixture must include distant terrain seen without visiting it");
+    check(remembered.explored_tiles(40,40).at({25,1}) == first_sight.at({25,1}),
+        "Distant sight should be saved in the explored map");
+    for (int i = 0; i < 8; ++i) check(remembered.move(Direction::Down), "Cannot enter the other exploration branch");
+    check(!remembered.visible_tiles(40,40).contains({25,1}), "Distant room should now be outside current sight");
+    const auto recalled = remembered.explored_tiles(40,40);
+    check(recalled.contains({25,1}) && recalled.at({25,1}) == first_sight.at({25,1}),
+        "Terrain seen earlier should stay drawn after leaving sight");
+    check(!recalled.contains({9,5}) && !recalled.contains({9,9}), "Remembered terrain revealed an unseen branch");
+    const auto explored_count = remembered.discovered_tiles();
+    check(remembered.explored_tiles(0,0).size() == 1, "Exploration memory should respect viewport bounds");
+    check(remembered.discovered_tiles() == explored_count && remembered.explored_tiles(40,40).contains({25,1}),
+        "Shrinking the viewport should not discard exploration memory");
+
+    // Visits also save terrain when it passes offscreen before a view refresh.
+    HyperMaze visited(bent);
+    for (int i = 0; i < 8; ++i) check(visited.move(Direction::Right), "Cannot visit the first exploration room");
+    for (int i = 0; i < 8; ++i) check(visited.move(Direction::Up), "Cannot visit the exploration room past the turn");
+    check(!visited.visible_tiles(20,20).contains({1,1}), "Starting room should now be hidden around the turn");
+    const auto visited_map = visited.explored_tiles(20,20);
+    check(visited_map.contains({1,1}) && visited_map.contains({3,1}), "Visited rooms and corridors should remain drawn");
+    visited = HyperMaze(bent);
+    check(visited.discovered_tiles() == 9 && visited.tile({9,9}) == Tile::Blank
+        && !visited.explored_tiles(20,20).contains({9,9}), "A new maze should clear exploration memory");
+
     // Two different graph paths can place incompatible terrain at the same
     // coordinates. Looking through one door must keep following that door's
     // connection, regardless of which overlapping rooms were visited last.
@@ -214,6 +249,8 @@ int main() {
     for (int i = 0; i < 2; ++i) check(overlapping.move(Direction::Down), "Cannot return to the original viewpoint");
     check(blocks_sight(overlapping.tile({8,1})), "Overlapping fixture must overwrite the first room's doorway");
     check(overlapping.visible_tiles(20, 20) == before_exploring, "Overlapping visited terrain changed the visible graph path");
+    check(overlapping.explored_tiles(20,20).at({8,1}) == Tile::DoorOpen
+        && overlapping.tile({8,1}) == Tile::DoorOpen, "Current sight must replace conflicting remembered terrain");
 
     // Repeated placements of a self-loop unfold along the ray, instead of being
     // cut off by a global visited-node set or recursing without a viewport bound.

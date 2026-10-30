@@ -105,6 +105,13 @@ namespace HypermazeModel {
             return Tile::Blank;
         });
     }
+    VisibleTiles HyperMaze::explored_tiles(int columns, int rows) {
+        const auto visible = visible_tiles(columns, rows);
+        for (const auto& [position, tile] : visible) discovered[position] = tile;
+        return VisibilityDetail::field_of_view(player_, columns, rows, [this](Position p) {
+            return tile(p);
+        });
+    }
     bool HyperMaze::move(Direction direction) {
         const auto next = player_ + offset(direction);
         const auto local = next - origin_;

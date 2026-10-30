@@ -46,7 +46,7 @@ void HypermazeGame::refresh_visibility() {
     const auto size = camera.framebuffer_size();
     const int columns = static_cast<int>(std::ceil(size.width / (2 * tile_size))) + 1;
     const int rows = static_cast<int>(std::ceil(size.height / (2 * tile_size))) + 1;
-    map_tiles = maze.visible_tiles(columns, rows);
+    map_tiles = maze.explored_tiles(columns, rows);
 }
 
 void HypermazeGame::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {

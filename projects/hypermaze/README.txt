@@ -25,4 +25,10 @@ gate blocks it. Blocking walls remain visible. Each ray follows the maze graph s
 overlapping placements and loops retain their connections. Visibility updates
 after movement, regeneration and resizing.
 
+Visited terrain and everything revealed in the viewport are remembered for the
+current maze. Explored areas remain drawn after leaving line of sight, alongside
+the current view. Current sight and the player's region replace older remembered
+tiles where placements overlap. Remembered terrain does not cast additional rays
+or reveal unseen areas. R starts a new maze and clears exploration memory.
+
 The world model tests run through CTest. Interactive play remains a manual check.

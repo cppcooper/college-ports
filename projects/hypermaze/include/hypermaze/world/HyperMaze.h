@@ -42,6 +42,8 @@ namespace HypermazeModel {
         // Reveal the current region and rooms one connection away. Farther
         // terrain requires sight from the player; looking never marks it visited.
         VisibleTiles visible_tiles(int columns, int rows);
+        // Remember current sight and return all known terrain in the viewport.
+        VisibleTiles explored_tiles(int columns, int rows);
         const Graph& graph() const { return graph_; }
         Position player() const { return player_; }
         Position origin() const { return origin_; }
