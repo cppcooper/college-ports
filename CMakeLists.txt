@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(CTest)
+
 # Projects
 # Select one game, a semicolon-separated list, or all four.
 set(COLLEGE_PORTS_PROJECTS "space-invaders" CACHE STRING "Games to configure (or 'all')")
@@ -35,6 +37,7 @@ endif()
 include(cmake/GameRuntime.cmake)
 
 # Game targets
+add_subdirectory(projects/common)
 foreach(game IN LISTS selected_projects)
     add_subdirectory("projects/${game}")
 endforeach()
