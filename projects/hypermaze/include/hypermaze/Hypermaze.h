@@ -6,10 +6,9 @@
 #include <cheryl/core/rendering/camera.h>
 #include <hypermaze/controllers/player.h>
 #include <hypermaze/gui/GameUI.h>
-#include <hypermaze/world/HyperMaze.h>
+#include <hypermaze/world/Visibility.h>
 
 #include <filesystem>
-#include <map>
 
 class HypermazeGame final : public CE::Game::AbstractGame {
     static constexpr float tile_size = 32;
@@ -22,7 +21,7 @@ class HypermazeGame final : public CE::Game::AbstractGame {
     CE::Rendering::Camera2D camera;
     std::shared_ptr<const CE::Assets::Tilesets::Asset> tiles;
     std::optional<CE::Assets::Graphics::Asset> player;
-    std::map<HypermazeModel::Position, HypermazeModel::Tile> map_tiles;
+    HypermazeModel::VisibleTiles map_tiles;
 
     void refresh_visibility();
 

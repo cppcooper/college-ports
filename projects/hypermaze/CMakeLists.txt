@@ -1,5 +1,5 @@
 add_library(hypermaze_model STATIC
-    src/world/Graph.cpp src/world/Terrain.cpp src/world/HyperMaze.cpp)
+    src/world/Graph.cpp src/world/Terrain.cpp src/world/HyperMaze.cpp src/world/Visibility.cpp)
 target_include_directories(hypermaze_model PUBLIC include)
 
 add_executable(hypermaze
@@ -15,4 +15,7 @@ if(BUILD_TESTING)
     add_executable(hypermaze_tests tests/world.cpp)
     target_link_libraries(hypermaze_tests PRIVATE hypermaze_model)
     add_test(NAME hypermaze_world COMMAND hypermaze_tests)
+    add_executable(hypermaze_visibility_tests tests/visibility.cpp)
+    target_link_libraries(hypermaze_visibility_tests PRIVATE hypermaze_model)
+    add_test(NAME hypermaze_visibility COMMAND hypermaze_visibility_tests)
 endif()

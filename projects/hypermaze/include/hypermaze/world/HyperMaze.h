@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hypermaze/world/Terrain.h>
+#include <hypermaze/world/Visibility.h>
 
 #include <map>
 #include <optional>
@@ -27,6 +27,7 @@ namespace HypermazeModel {
         Terrain& room(std::size_t node);
         Terrain& corridor(std::size_t link);
         Region current_region() const;
+        std::vector<Region> adjacent_regions();
         Terrain& terrain(const Region& region);
         bool cross_boundary(Region& region, Direction direction, Position from);
         void place(const Terrain& terrain);
@@ -38,6 +39,9 @@ namespace HypermazeModel {
         bool move(Direction direction);
         const Terrain& terrain() const;
         Tile tile(Position p) const;
+        // Reveal the current region and rooms one connection away. Farther
+        // terrain requires sight from the player; looking never marks it visited.
+        VisibleTiles visible_tiles(int columns, int rows);
         const Graph& graph() const { return graph_; }
         Position player() const { return player_; }
         Position origin() const { return origin_; }

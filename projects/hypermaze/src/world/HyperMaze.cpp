@@ -1,4 +1,5 @@
 #include <hypermaze/world/HyperMaze.h>
+#include "VisibilityRay.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -40,6 +41,31 @@ namespace HypermazeModel {
     Terrain& HyperMaze::terrain(const Region& region) {
         return region.corridor ? corridor(region.index) : room(region.index);
     }
+    std::vector<HyperMaze::Region> HyperMaze::adjacent_regions() {
+        std::vector<Region> adjacent;
+        const auto active = current_region();
+        const auto add_room = [this, &adjacent](Region passage, Direction direction) {
+            const auto end = passage.origin + corridor_end(terrain(passage), direction);
+            if (!cross_boundary(passage, direction, end)) throw std::logic_error("Corridor has no room endpoint");
+            adjacent.push_back(passage);
+        };
+        if (active.corridor) {
+            const auto direction = graph_.links.at(active.index).direction;
+            add_room(active, direction);
+            add_room(active, opposite(direction));
+        } else {
+            const auto& node = graph_.nodes.at(active.index);
+            for (auto direction : {Direction::Left, Direction::Right, Direction::Up, Direction::Down})
+                for (std::size_t index = 0; index < node.wall(direction).size(); ++index) {
+                    auto passage = active;
+                    const auto door = active.origin + node.doorway(direction, index);
+                    if (!cross_boundary(passage, direction, door)) throw std::logic_error("Room has no corridor doorway");
+                    adjacent.push_back(passage);
+                    add_room(passage, direction);
+                }
+        }
+        return adjacent;
+    }
     void HyperMaze::place(const Terrain& terrain) {
         for (int y = 0; y < terrain.height; ++y)
             for (int x = 0; x < terrain.width; ++x)
@@ -48,6 +74,36 @@ namespace HypermazeModel {
     Tile HyperMaze::tile(Position p) const {
         const auto found = discovered.find(p);
         return found == discovered.end() ? Tile::Blank : found->second;
+    }
+    VisibleTiles HyperMaze::visible_tiles(int columns, int rows) {
+        const auto adjacent = adjacent_regions();
+        return VisibilityDetail::field_of_view(player_, columns, rows, [this, &adjacent](Position target) {
+            const auto local = target - origin_;
+            if (terrain().contains(local)) return terrain().at(local);
+            TileLookup sample = [this, region = current_region(), current = player_](Position p) mutable {
+                if (!terrain(region).contains(p - region.origin)) {
+                    const auto delta = p - current;
+                    Direction direction;
+                    if (delta == Position{1, 0}) direction = Direction::Right;
+                    else if (delta == Position{-1, 0}) direction = Direction::Left;
+                    else if (delta == Position{0, 1}) direction = Direction::Up;
+                    else if (delta == Position{0, -1}) direction = Direction::Down;
+                    else return Tile::Blank;
+                    if (!cross_boundary(region, direction, current)) return Tile::Blank;
+                }
+                current = p;
+                return terrain(region).at(p - region.origin);
+            };
+            // Player sight takes precedence where graph placements overlap.
+            // Revealed neighboring rooms never become additional ray origins.
+            const auto seen = VisibilityDetail::trace_ray(player_, target, sample);
+            if (seen != Tile::Blank) return seen;
+            for (const auto& region : adjacent) {
+                const auto p = target - region.origin;
+                if (terrain(region).contains(p)) return terrain(region).at(p);
+            }
+            return Tile::Blank;
+        });
     }
     bool HyperMaze::move(Direction direction) {
         const auto next = player_ + offset(direction);

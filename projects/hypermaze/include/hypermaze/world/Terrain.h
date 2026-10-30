@@ -7,6 +7,7 @@ namespace HypermazeModel {
         Blank, Floor1, Floor2, Wall1, Wall2, TopLeft, TopRight, BottomLeft,
         BottomRight, Stairs, DoorOpen, DoorClosed, GateClosed, Horizontal, Vertical
     };
+    bool blocks_sight(Tile tile);
     struct Terrain {
         int width = 0;
         int height = 0;

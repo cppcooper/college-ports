@@ -46,14 +46,7 @@ void HypermazeGame::refresh_visibility() {
     const auto size = camera.framebuffer_size();
     const int columns = static_cast<int>(std::ceil(size.width / (2 * tile_size))) + 1;
     const int rows = static_cast<int>(std::ceil(size.height / (2 * tile_size))) + 1;
-    map_tiles.clear();
-    const auto eye = maze.player();
-    for (int y = -rows; y <= rows; ++y)
-        for (int x = -columns; x <= columns; ++x) {
-            const HypermazeModel::Position position{eye.x + x, eye.y + y};
-            const auto tile = maze.tile(position);
-            if (tile != HypermazeModel::Tile::Blank) map_tiles.emplace(position, tile);
-        }
+    map_tiles = maze.visible_tiles(columns, rows);
 }
 
 void HypermazeGame::prepare_render_frame(CE::Rendering::FrameWriter& frame) const {

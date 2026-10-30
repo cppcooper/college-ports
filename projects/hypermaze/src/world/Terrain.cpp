@@ -3,6 +3,13 @@
 #include <random>
 
 namespace HypermazeModel {
+    bool blocks_sight(Tile tile) {
+        switch (tile) {
+            case Tile::Floor1: case Tile::Floor2: case Tile::Stairs:
+            case Tile::DoorOpen: case Tile::Horizontal: case Tile::Vertical: return false;
+            default: return true;
+        }
+    }
     bool Terrain::contains(Position p) const { return p.x >= 0 && p.y >= 0 && p.x < width && p.y < height; }
     Tile Terrain::at(Position p) const { return contains(p) ? tiles[p.y * width + p.x] : Tile::Blank; }
     bool Terrain::can_move(Position p) const {
