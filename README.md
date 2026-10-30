@@ -1,7 +1,8 @@
 # college-ports
 
-College projects being ported to Cheryl Engine 4. The CMake configuration supports
-all four projects; their legacy application code is still being ported.
+Four college projects ported to Cheryl Engine 4: Space Invaders, Hypermaze, Rover,
+and Word Search. Each uses Cheryl startup, action contexts, simulation lifecycle
+hooks, retained render frames, and a TGUI HUD.
 
 Use CMake 3.28+, Ninja, and a C++23 compiler. CMake first looks for an installed
 Cheryl SDK using normal package discovery. For an installation outside the system
@@ -29,6 +30,59 @@ The default project is `space-invaders`. Set `COLLEGE_PORTS_PROJECTS` to `all`,
 `hypermaze`, `rover`, `space-invaders`, `word`, or a quoted semicolon-separated list.
 Executables go in the build directory's `bin/` folder. For Release, use
 `shared-release` in the same commands.
+
+Build all four games and run the model tests:
+
+```sh
+cmake --preset shared-debug -DCOLLEGE_PORTS_PROJECTS=all
+cmake --build --preset shared-debug
+ctest --test-dir builds/shared-debug --output-on-failure
+```
+
+The new ports share small asset, input, and UI helpers under `projects/common/`.
+Each game's `src/` and `include/<game>/` directories separate its application,
+gameplay model, controllers, and GUI. Model tests live under `tests/`; map and
+puzzle files live under `data/`. The [porting record](PORTING.md) describes the
+layout and the three implementation stages.
+
+The three newer ports run from any directory using CMake's assets and data
+defaults. Override assets with `--assets PATH`; every executable accepts `--help`. Add `--concurrent`
+to run simulation on a worker, or `--fixed` to use fixed simulation steps.
+
+| Executable | Controls and options |
+| --- | --- |
+| `hypermaze` | WASD, arrows, or gamepad D-pad move; R generates a new maze; F3 toggles the debug HUD; Esc quits. `--seed 42` selects a repeatable maze. |
+| `rover` | Space pauses search; N advances one operation; R restarts; +/- changes speed; E switches between search and editor; Esc quits. `--map PATH`, `--start X Y`, `--goal X Y`, and `--steps-per-second N` configure the search. |
+| `word_search` | Arrows or D-pad select a match; Space or gamepad A toggles its solution; A key toggles all solutions; R rescans; Esc quits. Mouse wheel/scrollbars navigate the puzzle and match list. `--puzzle PATH` loads another puzzle. |
+
+For example:
+
+```sh
+builds/shared-debug/bin/hypermaze --seed 42
+builds/shared-debug/bin/rover --editor
+builds/shared-debug/bin/word_search --puzzle projects/word/data/default.word
+```
+
+Rover's editor uses WASD to scroll, 1/2/3 to select rock/hole/dirt, and the left
+mouse button to paint. Shift toggles spray painting; Up/Down changes brush radius.
+F5 saves to the build directory's `projects/rover/data/edited.map`; use
+`--save-map PATH` to choose another destination. The original maps are in
+`projects/rover/data/`. Search uses goal-directed depth-first traversal, advances
+within a bounded per-tick budget, and reports both found and unreachable goals.
+
+Word Search accepts the original binary `.wrd` format: two unsigned dimension
+bytes, row-major ASCII letters, and a brace-enclosed comma-separated answer list.
+It also accepts text files beginning with `WORDSEARCH width height`, followed by
+one letter row per line and `{ANSWER,WORDS}`. Letters and answers are normalized
+to uppercase. Dimensions are limited to 256 per axis and files to 2 MiB. The
+included sample has eight words, one in each search direction. Repeated and
+overlapping occurrences are retained; reverse matches over the same cells of a
+palindrome count once. Rescanning resets the selection and solution highlights.
+
+The model tests cover maze connectivity/traversal, original packed-map loading,
+search reachability, editor bounds, and puzzle parsing/scanning. Interactive
+graphics, input, resizing, and sequential/concurrent runtime play remain manual
+checks.
 
 Set **CHERYL_ENGINE_SOURCE_DIR** in your CLion CMake profile to use an existing
 buildable Cheryl checkout:
@@ -62,6 +116,7 @@ The CMake files have these responsibilities:
 | [cmake/Cheryl.cmake](cmake/Cheryl.cmake) | Discover SDKs, define the source path, and expose the SDK setup targets. |
 | [cmake/InitializeCheryl.cmake](cmake/InitializeCheryl.cmake) | Initialize the default submodule and check or align the configured source commit. |
 | [cmake/GameRuntime.cmake](cmake/GameRuntime.cmake) | Copy CMake-known runtime DLLs on Windows. |
+| `projects/common/` | Share asset submission, action-binding construction, and the TGUI scene lifecycle between the three newer ports. |
 | `projects/<game>/CMakeLists.txt` | Declare that game's sources, include directory, linked libraries, and executable location. |
 
 Cheryl owns its build-option defaults; this project does not repeat or override
@@ -78,9 +133,11 @@ Repeated builds reuse the compiled libraries. Normal SDK discovery takes priorit
 over this local fallback. CMake caches its selected package; set `Cheryl_DIR` or
 reset the CMake cache when switching SDK installations.
 
-Each game explicitly lists its dependencies in `target_link_libraries()`. All four
-use `Cheryl::OpenGL::Startup`; Space Invaders also uses `Cheryl::UI::TGUI`, which
-supplies both Cheryl's TGUI integration and the native `<TGUI/...>` widget headers.
+Each game declares its dependencies in `target_link_libraries()`. All four use
+`Cheryl::OpenGL::Startup` and `Cheryl::UI::TGUI`, which supplies both Cheryl's TGUI
+integration and native `<TGUI/...>` widget headers. Hypermaze, Rover and Word
+Search receive these through `college_ports_common`. Space Invaders also links
+`Cheryl::Audio::Miniaudio` and `Cheryl::UI::RmlUi` for audio and its menu.
 
 To use another library available in the SDK, add its target to the game's
 `target_link_libraries()` list, for example `Cheryl::Audio::Miniaudio`.
